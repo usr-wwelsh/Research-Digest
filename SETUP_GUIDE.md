@@ -133,17 +133,25 @@ Done! All files updated.
 Edit the Task Scheduler trigger to your preferred time (e.g., 6 AM, 9 PM)
 
 ### Change Number of Papers:
-Edit `main.py` line 21:
-```python
-PAPERS_PER_INTEREST = 10  # Fetch 10 instead of 5
+Edit `config.json` settings:
+```json
+{
+  "settings": {
+    "papers_per_interest": 15
+  }
+}
 ```
 
 ### Add More Interest Areas:
-Edit `main.py` lines 13-19 and add more queries:
-```python
-INTERESTS = {
-    "Your Topic": 'abs:"your keywords" OR ti:"your topic"',
-    # ... existing topics
+Edit `config.json` and add your topics:
+```json
+{
+  "interests": {
+    "Your Research Area": {
+      "query": "cat:cs.AI OR cat:cs.LG",
+      "keywords": ["keyword1", "keyword2", "keyword3"]
+    }
+  }
 }
 ```
 
