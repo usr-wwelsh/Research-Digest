@@ -39,7 +39,7 @@ Fetch, filter, and browse the latest research papers tailored to your interests.
 
 1. **Clone & Run**
    ```bash
-   git clone https://github.com/yourusername/research-digest.git
+   git clone https://github.com/wedsmoker/research-digest.git
    cd research-digest
    run_digest.bat
    ```
@@ -58,7 +58,7 @@ Fetch, filter, and browse the latest research papers tailored to your interests.
 ### Linux/macOS
 
 ```bash
-git clone https://github.com/yourusername/research-digest.git
+git clone https://github.com/wedsmoker/research-digest.git
 cd research-digest
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
