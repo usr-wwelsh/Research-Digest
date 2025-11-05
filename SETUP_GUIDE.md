@@ -15,15 +15,15 @@
 1. Press `Win + R`, type `taskschd.msc`, press Enter
 2. Click **"Create Basic Task"** in the right panel
 3. Fill in:
-   - **Name:** `arXiv Daily Digest`
+   - **Name:** `Research Digest Daily`
    - **Description:** `Fetches daily research papers and syncs to phone`
 4. **Trigger:** Select "Daily"
    - Start date: Today
    - Start time: **7:00 AM**
    - Recur every: **1 days**
 5. **Action:** Select "Start a program"
-   - **Program/script:** `C:\Users\Admin\python\1aResearch\run_digest.bat`
-   - **Start in:** `C:\Users\Admin\python\1aResearch`
+   - **Program/script:** Browse to your `run_digest.bat` file
+   - **Start in:** The folder containing the project (e.g., `C:\Users\YourName\research-digest`)
 6. Check **"Open the Properties dialog"** at the end
 7. In Properties:
    - Go to **Conditions** tab
@@ -43,23 +43,24 @@ If you want to run it at startup instead:
 ### On Your PC:
 1. Open Syncthing web UI (usually `http://localhost:8384`)
 2. Click **"Add Folder"**
-   - **Folder Path:** `C:\Users\Admin\python\1aResearch`
-   - **Folder Label:** `arXiv Research`
-   - **Folder ID:** `arxiv-research` (auto-generated)
+   - **Folder Path:** Your project directory (e.g., `C:\Users\YourName\research-digest`)
+   - **Folder Label:** `Research Digest`
+   - **Folder ID:** `research-digest` (auto-generated)
 3. Go to **"Sharing"** tab
 4. Click **"Add Device"** and enter your phone's Device ID
 
 ### On Your Phone:
 1. Install **Syncthing** from Play Store / App Store
 2. Open app → **Add Device** → Scan QR code from PC
-3. Accept the folder share request (`arXiv Research`)
-4. Set sync folder location (e.g., `/storage/emulated/0/arXiv/`)
+3. Accept the folder share request (`Research Digest`)
+4. Set sync folder location (e.g., `/storage/emulated/0/ResearchDigest/`)
 
 ### What Gets Synced:
 ```
-1aResearch/
+research-digest/
 ├── latest.html          ← Most recent digest (quick access)
 ├── index.html           ← Browse all reports
+├── tiktok_feed.html     ← Mobile-optimized feed
 └── arxiv_archive/
     ├── arxiv_digest_20251101.html
     ├── arxiv_digest_20251102.html
@@ -72,9 +73,10 @@ If you want to run it at startup instead:
 
 ### Method 1: Direct File Access
 1. Open your phone's file manager
-2. Navigate to the Syncthing folder (e.g., `arXiv/`)
-3. Open `latest.html` with any browser
-4. Open `index.html` to browse past reports
+2. Navigate to the Syncthing folder (e.g., `ResearchDigest/`)
+3. Open `latest.html` with any browser for desktop view
+4. Open `tiktok_feed.html` for mobile-optimized scrolling
+5. Open `index.html` to browse past reports
 
 ### Method 2: Use a Local HTML Viewer App
 Install **"HTML Viewer"** or **"WebView Tester"** from the app store:
@@ -82,9 +84,9 @@ Install **"HTML Viewer"** or **"WebView Tester"** from the app store:
 - Bookmark `latest.html` for instant access
 
 ### Method 3: Create a Home Screen Shortcut (Android)
-1. Open `latest.html` in Chrome
+1. Open `tiktok_feed.html` in Chrome (for mobile view)
 2. Menu → **"Add to Home screen"**
-3. Name it "arXiv Digest"
+3. Name it "Research Digest"
 4. Now you have one-tap access!
 
 ---
@@ -94,7 +96,7 @@ Install **"HTML Viewer"** or **"WebView Tester"** from the app store:
 ### Test the Batch Script:
 ```batch
 # Double-click run_digest.bat or run in Command Prompt:
-cd C:\Users\Admin\python\1aResearch
+cd path\to\research-digest
 run_digest.bat
 ```
 
@@ -113,13 +115,13 @@ Done! All files updated.
 ```
 
 ### Test Syncthing Sync:
-1. Create/edit any file in `C:\Users\Admin\python\1aResearch`
+1. Create/edit any file in your project directory
 2. Check your phone's Syncthing folder
 3. File should appear within seconds
 
 ### Test Task Scheduler:
 1. Open Task Scheduler
-2. Find "arXiv Daily Digest"
+2. Find "Research Digest Daily"
 3. Right-click → **"Run"**
 4. Watch it execute
 
@@ -169,7 +171,7 @@ In Syncthing → Folder → **Ignore Patterns**, add:
 - Check folder status in Syncthing UI (should say "Up to Date")
 
 ### Python script fails:
-- Test manually: `cd C:\Users\Admin\python\1aResearch && venv\Scripts\activate && python main.py`
+- Test manually: Navigate to project folder, run `venv\Scripts\activate` (Windows) or `source venv/bin/activate` (Linux/macOS), then `python main.py`
 - Check arXiv API rate limits (3-second delays are built in)
 - Ensure internet connection is active
 

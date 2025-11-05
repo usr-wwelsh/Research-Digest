@@ -120,23 +120,14 @@ Combine with `OR`/`AND`: `cat:cs.LG OR cat:cs.AI`
 
 ## 🔧 Advanced Usage
 
-### Automated Daily Digests
+### Automated Daily Digests & Mobile Sync
 
-**Windows Task Scheduler:**
-1. Open Task Scheduler
-2. Create Basic Task → Daily → 7:00 AM
-3. Action: Start Program → `C:\path\to\run_digest.bat`
-
-**Linux/macOS Cron:**
-```bash
-0 7 * * * cd /path/to/research-digest && ./venv/bin/python main.py && ./venv/bin/python generate_index.py
-```
-
-### Sync to Mobile (Syncthing)
-
-1. Install [Syncthing](https://syncthing.net/) on PC and phone
-2. Share project folder
-3. Access HTML files directly on phone
+**Want automatic daily updates synced to your phone?**
+See the [📱 Complete Setup Guide](SETUP_GUIDE.md) for:
+- Windows Task Scheduler configuration
+- Linux/macOS cron jobs
+- Syncthing mobile sync setup
+- Troubleshooting tips
 
 ### Reset Seen Papers
 
