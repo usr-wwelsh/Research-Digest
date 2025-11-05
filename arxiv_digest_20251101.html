@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>arXiv Digest • 2025-11-01</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --bg: #0f0f0f;
+      --text: #e8e8e8;
+      --muted: #999;
+      --border: #2a2a2a;
+      --card-bg: #1a1a1a;
+      --link: #6ba3ff;
+      --accent: #ff6b6b;
+      --green: #51cf66;
+      --yellow: #ffd43b;
+      --red: #ff6b6b;
+      --layman-bg: #1f2937;
+      --layman-border: #60a5fa;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--bg);
+      margin: 0;
+      padding: 1rem;
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      padding: 2rem 1rem 3rem;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-weight: 900;
+      font-size: 2.5rem;
+      margin: 0;
+      background: linear-gradient(135deg, var(--accent), #ffa94d);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-top: 0.5rem;
+      letter-spacing: 0.5px;
+    }
+
+    .interest-section {
+      margin-bottom: 3rem;
+    }
+
+    .interest-header {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-bottom: 1.2rem;
+      padding: 0.8rem 1rem;
+      background: var(--card-bg);
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+    }
+
+    .interest-title {
+      font-size: 1.3rem;
+      margin: 0;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .papers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .paper {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem;
+      transition: all 0.2s ease;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .paper:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(255, 107, 107, 0.15);
+    }
+
+    .paper-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.8rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .difficulty-badge {
+      padding: 0.3rem 0.7rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .paper h3 {
+      font-size: 1.05rem;
+      margin: 0 0 0.8rem 0;
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--text);
+    }
+
+    .layman-box {
+      background: var(--layman-bg);
+      border-left: 3px solid var(--layman-border);
+      padding: 0.7rem 0.9rem;
+      margin-bottom: 0.8rem;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    .summary {
+      color: var(--muted);
+      margin-bottom: 1rem;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      flex-grow: 1;
+    }
+
+    .paper-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 0.8rem;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+
+    .category-tag {
+      background: #1e3a5f;
+      color: #60a5fa;
+      padding: 0.25rem 0.65rem;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .date {
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .links {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.8rem;
+    }
+
+    .links a {
+      color: var(--link);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .links a:hover {
+      color: var(--accent);
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 4rem;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 768px) {
+      .papers-grid {
+        grid-template-columns: 1fr;
+      }
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>arXiv Research Digest</h1>
+      <div class="meta">November 01, 2025 • 45 papers across 5 interests</div>
+    </header>
+<section class="interest-section">
+  <div class="interest-header">
+    <span>🔬</span>
+    <h2 class="interest-title">Efficient ML / Edge AI</h2>
+  </div>
+  <div class="papers-grid">
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Inference-Cost-Aware Dynamic Tree Construction for Efficient Inference in Large Language Models</h3>
+      <div class="layman-box">💡 This research tackles the problem of language AI.</div>
+      <div class="summary"> Large Language Models (LLMs) face significant inference latency challenges stemming from their autoregressive design and large size . To address this, speculative decoding emerges as a solution, enabling the simultaneous generation and validation of multiple tokens .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CL</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26577v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26577.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Distilling Multilingual Vision-Language Models: When Smaller Models Stay Multilingual</h3>
+      <div class="layman-box">💡 This research reduces language AI.</div>
+      <div class="summary"> Knowledge distillation (KD) demonstrates promising results in transferring knowledge from larger to smaller VLMs . applying KD in multilingualism is an underexplored area . We study five distillation formulations across CLIP and SigLIP2 .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CL</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26271v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26271.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>STAR: A Privacy-Preserving, Energy-Efficient Edge AI Framework for Human Activity Recognition via Wi-Fi CSI in Mobile and Pervasive Computing Environments</h3>
+      <div class="layman-box">💡 This research presents techniques for privacy-preserving AI.</div>
+      <div class="summary"> Human Activity Recognition (HAR) via Wi-Fi Channel State Information (CSI) presents a privacy-preserving, contactless sensing approach suitable for smart homes, healthcare monitoring, and mobile IoT systems .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.LG</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26148v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26148.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Do Students Debias Like Teachers? On the Distillability of Bias Mitigation Methods</h3>
+      <div class="layman-box">💡 This research running AI locally on devices for computer vision.</div>
+      <div class="summary"> Knowledge distillation (KD) is an effective method for model compression and transferring knowledge between models . However, its effect on model's robustness against spurious correlations that degrade performance on out-of-distribution data remains underexplored . This study investigates the effect of knowledge distillation on the transferability of ``debiasing'' capabilities from teacher models to student models .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.LG</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26038v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26038.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>An Agentic Framework for Rapid Deployment of Edge AI Solutions in Industry 5.0</h3>
+      <div class="layman-box">💡 This research reduces edge computing.</div>
+      <div class="summary"> We present a novel framework for Industry 5.0 that simplifies the deployment of AI models on edge devices in various industrial settings . The design reduces latency and avoids external data transfer by enabling local inference and real-time processing .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.AI</span>
+        <span class="date">2025-10-29</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.25813v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.25813.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Energy-Efficient Autonomous Driving with Adaptive Perception and Robust Decision</h3>
+      <div class="layman-box">💡 This research explores techniques in machine learning.</div>
+      <div class="summary"> Autonomous driving is an emerging technology that is expected to bring significant social, economic, and environmental benefits . However, these benefits come with rising energy consumption by computation engines limiting the driving range of vehicles, especially electric ones . Perception computing is typically the most power-intensive component, as it relies on deep learning models to extract environmental features . To address these challenges, we propose an energy-efficient autonomous driving framework, called EneAD .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.AI</span>
+        <span class="date">2025-10-29</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.25205v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.25205.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Resource-Efficient and Robust Inference of Deep and Bayesian Neural Networks on Embedded and Analog Computing Platforms</h3>
+      <div class="layman-box">💡 This research makes more efficient edge computing.</div>
+      <div class="summary"> While machine learning has transformed numerous application domains, its growing computational demands increasingly constrain scalability and efficiency . In practice, neural networks must not only operate efficiently but also provide reliable predictions under distributional shifts or unseen data . This work advances resource-efficient and robust inference for both conventional and Bayesian neural networks .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.LG</span>
+        <span class="date">2025-10-28</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.24951v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.24951.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>UHKD: A Unified Framework for Heterogeneous Knowledge Distillation via Frequency-Domain Representations</h3>
+      <div class="layman-box">💡 This research reduces computer vision.</div>
+      <div class="summary"> Knowledge distillation (KD) is an effective model compression technique that transfers knowledge from a high-performance teacher to a lightweight student, reducing cost while maintaining accuracy . In visual applications, where large-scale image models are widely used, KD enables efficient deployment .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CV</span>
+        <span class="date">2025-10-28</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.24116v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.24116.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>A Survey on Efficient Vision-Language-Action Models</h3>
+      <div class="layman-box">💡 This research presents techniques for computer vision.</div>
+      <div class="summary"> Vision-Language-Action models (VLAs) represent a significant frontier in embodied intelligence, aiming to bridge digital knowledge with physical-world interaction . While these models have demonstrated remarkable generalist capabilities, deployment is severely hampered by the substantial computational and data requirements .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CV</span>
+        <span class="date">2025-10-27</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.24795v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.24795.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Rethinking Inference Placement for Deep Learning across Edge and Cloud Platforms: A Multi-Objective Optimization Perspective and Future Directions</h3>
+      <div class="layman-box">💡 This research running AI locally on devices for language AI.</div>
+      <div class="summary"> Edge intelligent applications like VR/AR and language model based chatbots have become widespread with the rapid expansion of IoT and mobile devices . But constrained edge devices often cannot serve the increasingly large and complex deep learning (DL) models . Research aims to balance accuracy, computation delay, transmission delay, and privacy concerns .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.DC</span>
+        <span class="date">2025-10-27</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.22909v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.22909.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+  </div>
+</section>
+<section class="interest-section">
+  <div class="interest-header">
+    <span>🔬</span>
+    <h2 class="interest-title">Privacy-Preserving ML</h2>
+  </div>
+  <div class="papers-grid">
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Non-Convex Over-the-Air Heterogeneous Federated Learning: A Bias-Variance Trade-off</h3>
+      <div class="layman-box">💡 This research distributed machine learning across computer vision.</div>
+      <div class="summary"> Over-the-air (OTA) federated learning (FL) has been well recognized as a scalable paradigm that exploits the waveform superposition of the wireless multiple-access channel . We develop novel OTA-FL SGD updates that allow a structured, time-invariant model bias while facilitating reduced variance updates .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.LG</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26722v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26722.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟡 Advanced</span>
+      </div>
+      <h3>On Purely Private Covariance Estimation</h3>
+      <div class="layman-box">💡 This research presents techniques for privacy-preserving AI.</div>
+      <div class="summary"> We present a simple perturbation mechanism for the release of $d-dimensional covariance matrices under pure differential privacy . For large datasets with at least $n\geq d^2/\varepsilon elements, our mechanism recovers the provably optimal Frobenius norm error guarantees of \cite{nikolov2023private}.</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.LG</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26717v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26717.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Tight Differentially Private PCA via Matrix Coherence</h3>
+      <div class="layman-box">💡 This research makes more efficient privacy-preserving AI.</div>
+      <div class="summary"> We revisit the task of computing the span of the top $r$ singular vectors $u_1, \ldots, u_r$ of a matrix under differential privacy . We show that a simple and efficient algorithm -- based on singular value decomposition and standard perturbation mechanisms -- returns a private rank-$r$ approximation whose error depends only on the coherence of the input .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.LG</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26679v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26679.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>UnifiedFL: A Dynamic Unified Learning Framework for Equitable Federation</h3>
+      <div class="layman-box">💡 This research protecting data privacy in privacy-preserving AI.</div>
+      <div class="summary"> Federated learning (FL) has emerged as a key paradigm for collaborative model training across multiple clients without sharing raw data . We propose UnifiedFL, a dynamic federated learning framework that represents heterogeneous local networks as nodes and edges in a directed model graph optimized by a shared graph neural network .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.LG</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26350v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26350.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>PEEL: A Poisoning-Exposing Encoding Theoretical Framework for Local Differential Privacy</h3>
+      <div class="layman-box">💡 This research protecting data privacy in privacy-preserving AI.</div>
+      <div class="summary"> Local Differential Privacy (LDP) is a widely adopted privacy-protection model in the Internet of Things . However, existing defenses either incur prohibitive resource overheads or rely on domain-specific prior knowledge . We propose PEEL, a Poisoning-Exposing Encoding theoretical framework for LDP, which departs from resource- or prior-dependent countermeasures . PEEL amplifies stealthy poisoning effects by re-encoding LDP-perturbed data via sparsification, normalization, and low-rank projection .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CR</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26102v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26102.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+  </div>
+</section>
+<section class="interest-section">
+  <div class="interest-header">
+    <span>🔬</span>
+    <h2 class="interest-title">Creative AI / Emotion</h2>
+  </div>
+  <div class="papers-grid">
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Contribution-Guided Asymmetric Learning for Robust Multimodal Fusion under Imbalance and Noise</h3>
+      <div class="layman-box">💡 This research achieves better emotion AI.</div>
+      <div class="summary"> Contribution-Guided Asymmetric Learning (CAL) aims to enhance the contribution of high-contribution modalities while compressing weak modalities to increase their contribution . CAL has shown outstanding performance in imbalanced fusion tasks and noise robustness tests . CAL is based on a modality contribution metric W^m combining the information quantity I(m) and confidence D(m).</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.MM</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26289v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26289.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Lost in Phonation: Voice Quality Variation as an Evaluation Dimension for Speech Foundation Models</h3>
+      <div class="layman-box">💡 This research presents techniques for speech processing.</div>
+      <div class="summary"> Recent advances in speech foundation models (SFMs) have enabled the direct processing of spoken language from raw audio . This capability allows SFMs to be exposed to rich paralinguistic variations embedded in the input speech signal . One under-explored dimension of this variation is voice quality, encompassing phonation types such as creaky and breathy voice .</div>
+      <div class="paper-footer">
+        <span class="category-tag">eess.AS</span>
+        <span class="date">2025-10-29</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.25577v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.25577.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Evaluating Emotion Recognition in Spoken Language Models on Emotionally Incongruent Speech</h3>
+      <div class="layman-box">💡 This research achieves better language AI.</div>
+      <div class="summary"> Advances in spoken language processing have driven the development of spoken language models . We evaluate four SLMs on the task of speech emotion recognition using a dataset of emotionally incongruent speech samples . Results indicate that SLMs rely predominantly on textual semantics rather than speech emotion to perform the task .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CL</span>
+        <span class="date">2025-10-29</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.25054v2" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.25054.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>MCIHN: A Hybrid Network Model Based on Multi-path Cross-modal Interaction for Multimodal Emotion Recognition</h3>
+      <div class="layman-box">💡 This research understanding emotions in emotion AI.</div>
+      <div class="summary"> Multimodal emotion recognition is crucial for future human-computer interaction . However accurate emotion recognition still faces significant challenges due to differences between different modalities and the difficulty of characterizing unimodal emotional information . A hybrid network model based on multipath cross-modal interaction (MCIHN) is proposed .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CV</span>
+        <span class="date">2025-10-28</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.24827v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.24827.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Emotion-Coherent Reasoning for Multimodal LLMs via Emotional Rationale Verifier</h3>
+      <div class="layman-box">💡 This research understanding emotions in language AI.</div>
+      <div class="summary"> Emotional Rationale Verifier (ERV) and an Explanation Reward are novel approaches to predicting emotions . Authors propose a novel approach: the ERV and an explanation reward . Their method significantly improves explanation-prediction consistency and explanation emotion accuracy .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.AI</span>
+        <span class="date">2025-10-27</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.23506v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.23506.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Emotion Recognition with Minimal Wearable Sensing: Multi-domain Feature, Hybrid Feature Selection, and Personalized vs. Generalized Ensemble Model Analysis</h3>
+      <div class="layman-box">💡 This research proposes a method for edge computing.</div>
+      <div class="summary"> Negative emotions are linked to the onset of neurodegenerative diseases and dementia . Physiological signals from wearable devices offer a promising noninvasive method for continuous emotion monitoring . The method is designed for deployment in resource-constrained systems, such as Internet of Things .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.HC</span>
+        <span class="date">2025-10-26</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.22498v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.22498.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>LUNA: Efficient and Topology-Agnostic Foundation Model for EEG Signal Analysis</h3>
+      <div class="layman-box">💡 This research explores techniques in emotion AI.</div>
+      <div class="summary"> LUNA (Latent Unified Network Architecture) is a self-supervised foundation model that reconciles disparate electrode geometries while scaling linearly -- not quadratically -- with channel count . LUNA compresses multi-channel EEG into a fixed-size, topology-agnostic latent space via learned queries and cross-attention . It demonstrates highly competitive performance across several benchmarks .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.LG</span>
+        <span class="date">2025-10-25</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.22257v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.22257.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Multi-dataset Joint Pre-training of Emotional EEG Enables Generalizable Affective Computing</h3>
+      <div class="layman-box">💡 This research presents techniques for emotion AI.</div>
+      <div class="summary"> The method outperforms state-of-the-art large-scale EEG models by an average of 4.57% in AUROC for few-shot emotion recognition and 11.92% in accuracy for zero-shot generalization to a new dataset .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.LG</span>
+        <span class="date">2025-10-25</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.22197v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.22197.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>SentiMaithili: A Benchmark Dataset for Sentiment and Reason Generation for the Low-Resource Maithili Language</h3>
+      <div class="layman-box">💡 This research presents techniques for language AI.</div>
+      <div class="summary"> Maithili is an Indo-Aryan language spoken by more than 13 million people in the Purvanchal region of India . It is valued for its rich linguistic structure and cultural significance .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CL</span>
+        <span class="date">2025-10-25</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.22160v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.22160.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>REVE: A Foundation Model for EEG -- Adapting to Any Setup with Large-Scale Pretraining on 25,000 Subjects</h3>
+      <div class="layman-box">💡 This research reduces computer vision.</div>
+      <div class="summary"> Foundation models have transformed AI by reducing reliance on task-specific data through large-scale pretraining . While successful in language and vision, their adoption in EEG has lagged due to the heterogeneity of public datasets . Existing EEG foundation models struggle to generalize across these variations, often restricting pretraining to a single setup . We present REVE (Representation for EEG with Versatile Embeddings) a pretrained model .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.LG</span>
+        <span class="date">2025-10-24</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.21585v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.21585.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+  </div>
+</section>
+<section class="interest-section">
+  <div class="interest-header">
+    <span>🔬</span>
+    <h2 class="interest-title">Lightweight Systems</h2>
+  </div>
+  <div class="papers-grid">
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Vectorized Context-Aware Embeddings for GAT-Based Collaborative Filtering</h3>
+      <div class="layman-box">💡 This research enhances language AI.</div>
+      <div class="summary"> Recommender systems often struggle with data sparsity and cold-start scenarios . This paper presents a Graph Attention Network (GAT) based Collaborative Filtering (CF) framework enhanced with context aware embeddings .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.IR</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26461v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26461.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟡 Advanced</span>
+      </div>
+      <h3>On neighborhoods of embedded toroidal and Hopf manifolds and their foliations</h3>
+      <div class="layman-box">💡 This research running AI on low-power devices for edge computing.</div>
+      <div class="summary"> In this article, we give completely new examples of embedded complex manifolds the germ of neighborhood of which is holomorphically equivalent to the zero section in its normal bundle . The first set of examples is composed of connected abelian complex Lie groups, embedded in some complex manifold $M$. The second set is $n$-dimensional Hopf manifolds, embedded as hypersurfaces .</div>
+      <div class="paper-footer">
+        <span class="category-tag">math.CV</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26454v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26454.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Scales++: Compute Efficient Evaluation Subset Selection with Cognitive Scales Embeddings</h3>
+      <div class="layman-box">💡 This research makes more efficient language AI.</div>
+      <div class="summary"> The prohibitive cost of evaluating large language models (LLMs) on comprehensive benchmarks necessitates the creation of small yet representative data subsets that enable efficient assessment while retaining predictive fidelity . Current methods for this task operate under a model-centric paradigm, selecting benchmarking items based on the collective performance of existing models . Such approaches are limited by large upfront costs, an inability to immediately handle new benchmarks (`cold-start'), and the fragile assumption that future models will share the failure patterns of their predecessors .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.AI</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26384v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26384.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟡 Advanced</span>
+      </div>
+      <h3>From Embedding to Control: Representations for Stochastic Multi-Object Systems</h3>
+      <div class="layman-box">💡 This research achieves better machine learning.</div>
+      <div class="summary"> This paper studies how to achieve accurate modeling and effective control in stochastic nonlinear dynamics with multiple interacting objects . Non-uniform interactions and random topologies make this task challenging .</div>
+      <div class="paper-footer">
+        <span class="category-tag">eess.SY</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26344v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26344.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🔴 Theory-Heavy</span>
+      </div>
+      <h3>Sharp embeddings and existence results for Logarithmic $p$-Laplacian equations with critical growth</h3>
+      <div class="layman-box">💡 This research explores techniques in machine learning.</div>
+      <div class="summary"> In this paper, we derive a new $p$-Logarithmic Sobolev inequality and optimal continuous and compact embeddings into Orlicz-type spaces of the function space associated with the logarathmic $p$.-Laplacian . By employing the method of the Nehari manifold, we prove the existence of a nontrivial weak solution . We conduct an asymptotic analysis of a weighted nonlocal, nonlinear problem governed by the fractional</div>
+      <div class="paper-footer">
+        <span class="category-tag">math.AP</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26286v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26286.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Accretion rates of stellar-mass compact objects embedded in AGN discs</h3>
+      <div class="layman-box">💡 This research running AI on low-power devices for edge computing.</div>
+      <div class="summary"> Stellar-mass compact objects (COs) embedded in active galactic nucleus (AGN) discs are commonly assumed to accrete via Bondi or Bondi-Hoyle-Lyttleton prescriptions . We show that differential rotation in AGN discs can impart non-negligible angular momentum, in which case accretion proceeds through a viscous disc rather than Bondi/BHL flow .</div>
+      <div class="paper-footer">
+        <span class="category-tag">astro-ph.HE</span>
+        <span class="date">2025-10-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.26111v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.26111.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟡 Advanced</span>
+      </div>
+      <h3>An explicit formula of the limit of the heat kernel measures on the spheres embedded in $\R^\infty$</h3>
+      <div class="layman-box">💡 This research explores techniques in machine learning.</div>
+      <div class="summary"> We show that the heat kernel measures based at the north pole of the spheres converges to a Gaussian measure in $R^\infty$ We also find an explicit formula for this measure .</div>
+      <div class="paper-footer">
+        <span class="category-tag">math.PR</span>
+        <span class="date">2025-10-29</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.25855v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.25855.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟡 Advanced</span>
+      </div>
+      <h3>Tight Spherical Embeddings (Updated Version)</h3>
+      <div class="layman-box">💡 This research explores techniques in machine learning.</div>
+      <div class="summary"> This is an updated version of a paper which appeared in the proceedings of the 1979 Berlin Colloquium on Global Differential Geometry . The main result of this paper is that every compact isoparametric hypersurface $M^n \subset S^{n+1} is tight .</div>
+      <div class="paper-footer">
+        <span class="category-tag">math.DG</span>
+        <span class="date">2025-10-29</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.25611v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.25611.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Enhanced quality factors at resonance in acoustofluidic cavities embedded in matched elastic metamaterials</h3>
+      <div class="layman-box">💡 This research enhances machine learning.</div>
+      <div class="summary"> We show that by embedding liquid-filled acoustofluidic cavities in a metamaterial, the quality factor of the cavity at selected acoustic resonance modes can be enhanced by 2 to 3 orders of magnitude .</div>
+      <div class="paper-footer">
+        <span class="category-tag">physics.flu-dyn</span>
+        <span class="date">2025-10-29</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.25527v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.25527.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Hierarchical Physics-Embedded Learning for Spatiotemporal Dynamical Systems</h3>
+      <div class="layman-box">💡 This research explores techniques in edge computing.</div>
+      <div class="summary"> Modeling complex spatiotemporal dynamics, particularly in far-from-equilibrium systems, remains a challenge in science . The governing partial differential equations (PDEs) for these systems are often intractable to derive from first principles .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.LG</span>
+        <span class="date">2025-10-29</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.25306v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.25306.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+  </div>
+</section>
+<section class="interest-section">
+  <div class="interest-header">
+    <span>🔬</span>
+    <h2 class="interest-title">Offline-First / Local AI</h2>
+  </div>
+  <div class="papers-grid">
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>SBASH: a Framework for Designing and Evaluating RAG vs. Prompt-Tuned LLM Honeypots</h3>
+      <div class="layman-box">💡 This research explores techniques in language AI.</div>
+      <div class="summary"> Honeypots are decoy systems used for gathering valuable threat intelligence . Maximising attacker engagement is essential to their utility . Research has highlighted that context-awareness is necessary to increase engagement . Large Language Models (LLMs) have been shown as one approach to increase context awareness .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CR</span>
+        <span class="date">2025-10-24</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.21459v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.21459.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>REx86: A Local Large Language Model for Assisting in x86 Assembly Reverse Engineering</h3>
+      <div class="layman-box">💡 This research improves language AI.</div>
+      <div class="summary"> Large Language Models offer potential for improving RE efficiency through automated comprehension and commenting . Cloud-hosted, closed-weight models pose privacy and security risks and cannot be used in closed-network facilities . REx86 reduces test-set cross-entropy loss by 64.2% and improves semantic cosine similarity against ground truth by 20.3\% over its base model .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CR</span>
+        <span class="date">2025-10-23</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.20975v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.20975.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>CORE: Reducing UI Exposure in Mobile Agents via Collaboration Between Cloud and Local LLMs</h3>
+      <div class="layman-box">💡 This research achieves better language AI.</div>
+      <div class="summary"> Mobile agents rely on Large Language Models (LLMs) to plan and execute tasks on smartphone user interfaces . While cloud-based LLMs achieve high task accuracy, they require uploading the full UI state at every step . In contrast, local LLMs avoid UI uploads but suffer from limited capacity, resulting in lower task success rates . CORE comprises three key components: (1) layout-aware block partitioning, (2) Co-planning) and Co-decision-making .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CL</span>
+        <span class="date">2025-10-17</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.15455v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.15455.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>LLM-guided Hierarchical Retrieval</h3>
+      <div class="layman-box">💡 This research explores techniques in language AI.</div>
+      <div class="summary"> Modern IR systems are increasingly tasked with answering complex, multi-faceted queries that require deep reasoning . We introduce LATTICE, a hierarchical retrieval framework that enables an LLM to reason over and navigate large corpora with logarithmic search complexity .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.IR</span>
+        <span class="date">2025-10-15</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.13217v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.13217.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>COSTAR-A: A prompting framework for enhancing Large Language Model performance on Point-of-View questions</h3>
+      <div class="layman-box">💡 This research enhances language AI.</div>
+      <div class="summary"> COSTAR-A is a novel prompt engineering framework that enhances the existing COSTAR method . COSTAR stands for Context, Objective, Style, Tone, Audience, and Response, by adding the 'Answer' component at the end .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CL</span>
+        <span class="date">2025-10-14</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.12637v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.12637.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Bridging Semantics & Structure for Software Vulnerability Detection using Hybrid Network Models</h3>
+      <div class="layman-box">💡 This research explores techniques in language AI.</div>
+      <div class="summary"> Software vulnerabilities remain a persistent risk, yet static and dynamic analyses often overlook structural dependencies that shape insecure behaviors . Viewing programs as heterogeneous graphs, we capture control- and data-flow relations as complex interaction networks . Our hybrid framework combines these graph representations with light-weight (<4B) local LLMs .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.SE</span>
+        <span class="date">2025-10-11</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.10321v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.10321.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>Open WebUI: An Open, Extensible, and Usable Interface for AI Interaction</h3>
+      <div class="layman-box">💡 This research presents techniques for language AI.</div>
+      <div class="summary"> The toolkit is designed to be open (open-source and local), extensible ( plugin support and users can interact with multiple models) The extensibility is enabled through a two-pronged plugin architecture and a community platform for sharing, importing, and adapting extensions .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.HC</span>
+        <span class="date">2025-10-02</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.02546v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.02546.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>DualTune: Decoupled Fine-Tuning for On-Device Agentic Systems</h3>
+      <div class="layman-box">💡 This research protecting data privacy in language AI.</div>
+      <div class="summary"> Large Language Models (LLMs) consistently underperform compared to frontier models in tool calling scenarios . We propose "decoupled fine-tuning" to create dedicated LoRA adapters for tool selection and tool-specific argument generation using separate loss masking for each of the subtasks . DualTune is an inference framework that leverages the LRA adapters created using decoupled fines-tune to perform efficient agent orchestration with the help of local models .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.AI</span>
+        <span class="date">2025-09-30</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2510.00229v2" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2510.00229.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>SecureFixAgent: A Hybrid LLM Agent for Automated Python Static Vulnerability Repair</h3>
+      <div class="layman-box">💡 This research automatically finding language AI.</div>
+      <div class="summary"> Static analysis tools like Bandit are effective at vulnerability detection but suffer from high false positives and lack repair capabilities . Large Language Models (LLMs) can suggest fixes but often hallucinate changes and lack self-validation . We present SecureFixAgent, a hybrid repair framework integrating Bandit with lightweight local LLMs in an iterative detect-repair-validate loop .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.CR</span>
+        <span class="date">2025-09-18</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2509.16275v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2509.16275.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+    <article class="paper">
+      <div class="paper-header">
+        <span class="difficulty-badge">🟢 Applied</span>
+      </div>
+      <h3>PrivWeb: Unobtrusive and Content-aware Privacy Protection For Web Agents</h3>
+      <div class="layman-box">💡 This research protecting data privacy in language AI.</div>
+      <div class="summary"> PrivWeb is a trusted add-on on web agents that anonymizes private information on interfaces according to user preferences . It features privacy categorization and adaptive notifications that selectively pauses tasks for user control over information collection for highly sensitive information . PrivWeb reduces perceived privacy risks with no associated increase in cognitive effort, and resulted in higher overall satisfaction .</div>
+      <div class="paper-footer">
+        <span class="category-tag">cs.HC</span>
+        <span class="date">2025-09-15</span>
+      </div>
+      <div class="links">
+        <a href="http://arxiv.org/abs/2509.11939v1" target="_blank">Abstract ↗</a>
+        <a href="https://arxiv.org/pdf/2509.11939.pdf" target="_blank">PDF ↗</a>
+      </div>
+    </article>
+  </div>
+</section>
+    <div class="footer">
+      ✨ Generated automatically • Powered by arXiv API
+    </div>
+  </div>
+</body>
+</html>

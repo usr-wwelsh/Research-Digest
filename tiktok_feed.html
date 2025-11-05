@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>Research Feed • November 05, 2025</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #000000;
+      --text: #ffffff;
+      --muted: #a0a0a0;
+      --card-bg: #1a1a1a;
+      --border: #2a2a2a;
+      --accent: #ff6b6b;
+      --heart-red: #ff4458;
+      --layman-bg: #1f2937;
+      --layman-border: #60a5fa;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #feed-container {
+      height: 100vh;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
+      padding-top: 60px; /* Space for fixed header */
+    }
+
+    .paper-card {
+      min-height: 100vh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .interest-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      padding: 0.4rem 0.9rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 1rem;
+    }
+
+    .difficulty-badge {
+      display: inline-block;
+      padding: 0.3rem 0.7rem;
+      border-radius: 15px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+
+    .paper-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    .layman-box {
+      background: var(--layman-bg);
+      border-left: 3px solid var(--layman-border);
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    .summary {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .paper-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .category-tag {
+      background: #1e3a5f;
+      color: #60a5fa;
+      padding: 0.3rem 0.7rem;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .links {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .links a {
+      color: #6ba3ff;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .links a:active {
+      color: var(--accent);
+    }
+
+    /* Fixed header with export button */
+    .fixed-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 0.8rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      z-index: 200;
+    }
+
+    .like-counter {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .export-button {
+      background: linear-gradient(135deg, var(--accent), #ffa94d);
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .export-button.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .export-button.active:active {
+      transform: scale(0.95);
+    }
+
+    .like-button {
+      position: fixed;
+      bottom: 2rem;
+      right: 1.5rem;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(26, 26, 26, 0.9);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 100;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .like-button:active {
+      transform: scale(0.9);
+    }
+
+    .like-button.liked {
+      background: var(--heart-red);
+      border-color: var(--heart-red);
+      animation: heartbeat 0.3s ease;
+    }
+
+    @keyframes heartbeat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+
+    .scroll-indicator {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-size: 0.8rem;
+      animation: bounce 2s infinite;
+      z-index: 50;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-10px); }
+    }
+
+    .hide-indicator {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Fixed Header with Export Button -->
+  <div class="fixed-header">
+    <div class="like-counter">
+      <span>♥</span>
+      <span><span id="likeCount">0</span> liked</span>
+    </div>
+    <button class="export-button" id="exportButton">Export Likes</button>
+  </div>
+
+  <div id="feed-container"></div>
+
+  <div class="like-button" id="likeButton">
+    <span id="heartIcon">♡</span>
+  </div>
+
+  <div class="scroll-indicator" id="scrollIndicator">
+    ↓ Scroll to explore
+  </div>
+
+  <script>
+    // ============================================
+    // EMBEDDED PAPERS DATA
+    // ============================================
+    const papers = [
+  {
+    "title": "Nesterov-Accelerated Robust Federated Learning Over Byzantine Adversaries",
+    "summary": " We investigate robust federated learning, where a group of workers collaboratively train a shared model under the orchestration of a central server in the presence of Byzantine adversaries . We propose a Byzantine-resilient Nesterov-Accelerated Federated Learning (Byrd-NAFL) algorithm .",
+    "link": "http://arxiv.org/abs/2511.02657v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02657.pdf",
+    "arxiv_id": "2511.02657",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 3,
+    "matched_keywords": [
+      "accelerat"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research enhances privacy-preserving AI.",
+    "interest_category": "Efficient ML / Edge AI"
+  },
+  {
+    "title": "DANIEL: A Distributed and Scalable Approach for Global Representation Learning with EHR Applications",
+    "summary": " Classical probabilistic graphical models face challenges in modern data environments . We revisit the Ising model and develop a distributed framework that enables scalable representation learning from large-scale binary data . We evaluate our algorithm on multi-institutional electronic health record (EHR) datasets from 58,248 patients .",
+    "link": "http://arxiv.org/abs/2511.02754v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02754.pdf",
+    "arxiv_id": "2511.02754",
+    "category": "stat.ME",
+    "published": "2025-11-04",
+    "relevance_score": 2,
+    "matched_keywords": [
+      "privacy",
+      "federated"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in privacy-preserving AI.",
+    "interest_category": "Privacy-Preserving ML"
+  },
+  {
+    "title": "Adaptive Neighborhood-Constrained Q Learning for Offline Reinforcement Learning",
+    "summary": " Offline reinforcement learning (RL) suffers from extrapolation errors induced by out-of-distribution (OOD) actions . To overcome these limitations, we propose a new neighborhood constraint that restricts action selection in the Bellman target to the union of neighborhoods of dataset actions . Theoretically, the constraint bounds extrapolation error and distribution shift under certain conditions, but also approximates the support constraint without requiring behavior policy modeling .",
+    "link": "http://arxiv.org/abs/2511.02567v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02567.pdf",
+    "arxiv_id": "2511.02567",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 2,
+    "matched_keywords": [
+      "art",
+      "design"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research tackles the problem of language AI.",
+    "interest_category": "Creative AI / Emotion"
+  },
+  {
+    "title": "EPARA: Parallelizing Categorized AI Inference in Edge Clouds",
+    "summary": " EPARA is an end-to-end AI parallel inference framework aimed at enhancing the edge AI serving capability . EPARA consists of a task-categorized parallelism allocator that decides the parallel mode of each task, a distributed request handler that performs the calculation for the specific request, and a state-aware scheduler that periodically updates service placement in edge clouds .",
+    "link": "http://arxiv.org/abs/2511.00603v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.00603.pdf",
+    "arxiv_id": "2511.00603",
+    "category": "cs.DC",
+    "published": "2025-11-01",
+    "relevance_score": 8,
+    "matched_keywords": [
+      "embedded",
+      "edge",
+      "resource",
+      "device"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research enhances language AI.",
+    "interest_category": "Lightweight Systems"
+  },
+  {
+    "title": "Forecasting Future Anatomies: Longitudianl Brain Mri-to-Mri Prediction",
+    "summary": " Neuroimaging has important implications for studying neurodegenerative diseases such as Alzheimer's disease . Most existing approaches predict future cognitive scores or clinical outcomes . Here we investigate longitudinal MRI image-to-image prediction that forecasts a participant's entire brain MRI several years into the future .",
+    "link": "http://arxiv.org/abs/2511.02558v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02558.pdf",
+    "arxiv_id": "2511.02558",
+    "category": "cs.CV",
+    "published": "2025-11-04",
+    "relevance_score": 1,
+    "matched_keywords": [
+      "local"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research creating new content with computer vision.",
+    "interest_category": "Offline-First / Local AI"
+  },
+  {
+    "title": "Curriculum Design for Trajectory-Constrained Agent: Compressing Chain-of-Thought Tokens in LLMs",
+    "summary": " Training agents to operate under strict constraints during deployment presents significant challenges . In this work, we propose a curriculum learning strategy that gradually tightens constraints during training, enabling the agent to incrementally master the deployment requirements . We provide theoretical analysis using an RL agent in a binary-tree Markov Decision Process .",
+    "link": "http://arxiv.org/abs/2511.02690v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02690.pdf",
+    "arxiv_id": "2511.02690",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 4,
+    "matched_keywords": [
+      "compression",
+      "inference",
+      "accelerat"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research proposes a method for language AI.",
+    "interest_category": "Efficient ML / Edge AI"
+  },
+  {
+    "title": "Orion-MSP: Multi-Scale Sparse Attention for Tabular In-Context Learning",
+    "summary": " Tabular data remain the predominant format for real-world applications . Developing effective neural models for tabular data remains challenging due to heterogeneous feature types and complex interactions occurring at multiple scales . Orion-MSP is a tabular ICL architecture featuring three key innovations: multi-scale processing to capture hierarchical feature interactions .",
+    "link": "http://arxiv.org/abs/2511.02818v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02818.pdf",
+    "arxiv_id": "2511.02818",
+    "category": "cs.AI",
+    "published": "2025-11-04",
+    "relevance_score": 0,
+    "matched_keywords": [],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in machine learning.",
+    "interest_category": "Privacy-Preserving ML"
+  },
+  {
+    "title": "STAR-VAE: Latent Variable Transformers for Scalable and Controllable Molecular Generation",
+    "summary": " STAR-VAE (Selfies-encoded, Transformer-based, AutoRegressive Variational Auto Encoder) is a scalable latent-variable framework . It is trained on 79 million drug-like molecules from PubChem, using SELFIES to guarantee syntactic validity .",
+    "link": "http://arxiv.org/abs/2511.02769v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02769.pdf",
+    "arxiv_id": "2511.02769",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 2,
+    "matched_keywords": [
+      "generative",
+      "art"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research presents techniques for machine learning.",
+    "interest_category": "Creative AI / Emotion"
+  },
+  {
+    "title": "Real-time Continual Learning on Intel Loihi 2",
+    "summary": " AI systems on edge devices face a critical challenge in open-world environments . Online continual learning (OCL) remains challenging in power-constrained settings . We present a neuromorphic solution called CLP-SNN: a spiking neural network architecture for Continually Learning Prototypes .",
+    "link": "http://arxiv.org/abs/2511.01553v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.01553.pdf",
+    "arxiv_id": "2511.01553",
+    "category": "cs.LG",
+    "published": "2025-11-03",
+    "relevance_score": 6,
+    "matched_keywords": [
+      "iot",
+      "edge",
+      "constrained",
+      "device"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research introduces a new approach to edge computing.",
+    "interest_category": "Lightweight Systems"
+  },
+  {
+    "title": "In Situ Training of Implicit Neural Compressors for Scientific Simulations via Sketch-Based Regularization",
+    "summary": " Focusing on implicit neural representations, we present a novel in situ training protocol that employs limited memory buffers of full and sketched data samples . We evaluate our method on a variety of complex simulation data in two and three dimensions .",
+    "link": "http://arxiv.org/abs/2511.02659v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02659.pdf",
+    "arxiv_id": "2511.02659",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 1,
+    "matched_keywords": [
+      "offline"
+    ],
+    "difficulty": "🟡 Advanced",
+    "layman": "This research introduces a new approach to machine learning.",
+    "interest_category": "Offline-First / Local AI"
+  },
+  {
+    "title": "Optimal Singular Damage: Efficient LLM Inference in Low Storage Regimes",
+    "summary": " Large language models (LLMs) are increasingly prevalent across diverse applications . However, their enormous size limits storage and processing capabilities to a few well-resourced stakeholders . This paper focuses on efficient storage of parameter updates in pre-trained models after fine-tuning .",
+    "link": "http://arxiv.org/abs/2511.02681v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02681.pdf",
+    "arxiv_id": "2511.02681",
+    "category": "cs.CL",
+    "published": "2025-11-04",
+    "relevance_score": 6,
+    "matched_keywords": [
+      "efficient",
+      "inference"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in language AI.",
+    "interest_category": "Efficient ML / Edge AI"
+  },
+  {
+    "title": "Agent-Omni: Test-Time Multimodal Reasoning via Model Coordination for Understanding Anything",
+    "summary": " Multimodal large language models have shown strong capabilities but remain limited to fixed modality pairs . Building fully omni-capable models that can integrate text, images, audio, and video remains impractical and lacks robust reasoning support . We propose an Agent-Omni framework that coordinates existing foundation models through a master-agent system .",
+    "link": "http://arxiv.org/abs/2511.02834v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02834.pdf",
+    "arxiv_id": "2511.02834",
+    "category": "cs.AI",
+    "published": "2025-11-04",
+    "relevance_score": 0,
+    "matched_keywords": [],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in language AI.",
+    "interest_category": "Privacy-Preserving ML"
+  },
+  {
+    "title": "When One Modality Sabotages the Others: A Diagnostic Lens on Multimodal Reasoning",
+    "summary": " In this paper, we introduce modality sabotage, a diagnostic failure mode in which a high-confidence unimodal error overrides other evidence and misleads the fused result . Applying our diagnostic layer in a case study on multimodal emotion recognition benchmarks with foundation models revealed systematic reliability profiles .",
+    "link": "http://arxiv.org/abs/2511.02794v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02794.pdf",
+    "arxiv_id": "2511.02794",
+    "category": "cs.AI",
+    "published": "2025-11-04",
+    "relevance_score": 2,
+    "matched_keywords": [
+      "emotion",
+      "art"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research forecasting language AI.",
+    "interest_category": "Creative AI / Emotion"
+  },
+  {
+    "title": "Boosting performance of computer vision applications through embedded GPUs on the edge",
+    "summary": " Edge computing can be used to offload certain high intensive tasks . Edge computing is usually composed of devices with limited capacity, which may impact in users quality of experience . This work proposes the use of embedded devices with graphics processing units (GPUs) to overcome such limitation .",
+    "link": "http://arxiv.org/abs/2511.01129v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.01129.pdf",
+    "arxiv_id": "2511.01129",
+    "category": "cs.CV",
+    "published": "2025-11-03",
+    "relevance_score": 10,
+    "matched_keywords": [
+      "embedded",
+      "edge",
+      "resource",
+      "device"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research presents techniques for computer vision.",
+    "interest_category": "Lightweight Systems"
+  },
+  {
+    "title": "Agentic AI for Mobile Network RAN Management and Optimization",
+    "summary": " Agentic AI represents a new paradigm for automating complex systems by using Large AI Models (LAMs) to provide human-level cognitive abilities with multimodal perception, planning, memory, and reasoning capabilities . The complexity of 5G and upcoming 6G networks renders manual optimization ineffective . Despite its rapid advances, there is no established framework outlining the foundational components and operational principles .",
+    "link": "http://arxiv.org/abs/2511.02532v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02532.pdf",
+    "arxiv_id": "2511.02532",
+    "category": "cs.AI",
+    "published": "2025-11-04",
+    "relevance_score": 3,
+    "matched_keywords": [
+      "mobile"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research presents techniques for machine learning.",
+    "interest_category": "Offline-First / Local AI"
+  },
+  {
+    "title": "Accelerated Frank-Wolfe Algorithms: Complementarity Conditions and Sparsity",
+    "summary": " We develop new algorithms in Frank-Wolfe family for minimizing smooth convex functions over compact convex sets . A key technical ingredient is a complementarity condition that captures solution sparsity -- face dimension for polytopes and rank for matrices . Our results close a gap on how to accelerate recent advancements in linearly-converging FW algorithms .",
+    "link": "http://arxiv.org/abs/2511.02821v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02821.pdf",
+    "arxiv_id": "2511.02821",
+    "category": "math.OC",
+    "published": "2025-11-04",
+    "relevance_score": 3,
+    "matched_keywords": [
+      "accelerat"
+    ],
+    "difficulty": "🟡 Advanced",
+    "layman": "This research speeds up machine learning.",
+    "interest_category": "Efficient ML / Edge AI"
+  },
+  {
+    "title": "Bringing Private Reads to Hyperledger Fabric via Private Information Retrieval",
+    "summary": " The prototype achieves an average end-to-end latency of 113 ms and a peer-side execution time below 42 ms . Storage profiling across three channel configurations shows near-linear growth .",
+    "link": "http://arxiv.org/abs/2511.02656v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02656.pdf",
+    "arxiv_id": "2511.02656",
+    "category": "cs.CR",
+    "published": "2025-11-04",
+    "relevance_score": 6,
+    "matched_keywords": [
+      "privacy",
+      "encrypted",
+      "private"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research proposes a method for privacy-preserving AI.",
+    "interest_category": "Privacy-Preserving ML"
+  },
+  {
+    "title": "Emotional Contagion in Code: How GitHub Emoji Reactions Shape Developer Collaboration",
+    "summary": " Developer communities increasingly rely on emoji reactions to communicate, but we know little about how these signals spread and influence technical discussions . We analyzed 2,098 GitHub issues and pull requests across 50 popular repositories to understand emotional contagion in software development . Our findings reveal a surprisingly positive emotional landscape: 57.4% of discussions carry positive sentiment .",
+    "link": "http://arxiv.org/abs/2511.02515v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02515.pdf",
+    "arxiv_id": "2511.02515",
+    "category": "cs.HC",
+    "published": "2025-11-04",
+    "relevance_score": 4,
+    "matched_keywords": [
+      "emotion",
+      "sentiment"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research understanding emotions in emotion AI.",
+    "interest_category": "Creative AI / Emotion"
+  },
+  {
+    "title": "Neuro-Inspired Task Offloading in Edge-IoT Networks Using Spiking Neural Networks",
+    "summary": " Traditional task offloading strategies in edge computing often rely on static heuristics or data-intensive machine learning models . We propose a novel task-offloading framework based on Spiking Neural Networks inspired by the efficiency and adaptability of biological neural systems .",
+    "link": "http://arxiv.org/abs/2511.01127v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.01127.pdf",
+    "arxiv_id": "2511.01127",
+    "category": "cs.DC",
+    "published": "2025-11-03",
+    "relevance_score": 10,
+    "matched_keywords": [
+      "iot",
+      "edge",
+      "resource",
+      "constrained"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research introduces a new approach to edge computing.",
+    "interest_category": "Lightweight Systems"
+  },
+  {
+    "title": "Agentic World Modeling for 6G: Near-Real-Time Generative State-Space Reasoning",
+    "summary": " We reframe open radio access network (O-RAN) near-real-time (Near-RT) control via counterfactual dynamics and a world modeling (WM) paradigm . This enables quantitative \"what-if\" forecasting beyond large language models as the primary modeling primitive . Actions such as physical resource blocks are treated as first-class control inputs in a causal world model .",
+    "link": "http://arxiv.org/abs/2511.02748v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02748.pdf",
+    "arxiv_id": "2511.02748",
+    "category": "cs.NI",
+    "published": "2025-11-04",
+    "relevance_score": 1,
+    "matched_keywords": [
+      "offline"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research forecasting language AI.",
+    "interest_category": "Offline-First / Local AI"
+  },
+  {
+    "title": "In Good GRACEs: Principled Teacher Selection for Knowledge Distillation",
+    "summary": " Knowledge distillation is an efficient strategy to use data generated by large \"teacher\" language models to train smaller capable \"student\" models . But selecting the optimal teacher for a specific student-task combination requires expensive trial-and-error . We propose a lightweight score called GRACE to quantify how effective a teacher will be for post-training a student model .",
+    "link": "http://arxiv.org/abs/2511.02833v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02833.pdf",
+    "arxiv_id": "2511.02833",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 10,
+    "matched_keywords": [
+      "efficient",
+      "edge",
+      "distillation",
+      "lightweight"
+    ],
+    "difficulty": "🟡 Advanced",
+    "layman": "This research makes more efficient language AI.",
+    "interest_category": "Efficient ML / Edge AI"
+  },
+  {
+    "title": "Fast, Private, and Protected: Safeguarding Data Privacy and Defending Against Model Poisoning Attacks in Federated Learning",
+    "summary": " Federated Learning (FL) is a distributed training paradigm wherein participants collaborate to build a global model while ensuring the privacy of the involved data . FPP employs a reputation-based mechanism to mitigate the participation of attackers .",
+    "link": "http://arxiv.org/abs/2511.02797v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02797.pdf",
+    "arxiv_id": "2511.02797",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 12,
+    "matched_keywords": [
+      "privacy",
+      "federated",
+      "secure",
+      "private"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research protecting data privacy in privacy-preserving AI.",
+    "interest_category": "Privacy-Preserving ML"
+  },
+  {
+    "title": "Audience Amplified: Virtual Audiences in Asynchronously Performed AR Theater",
+    "summary": " Users can wander around naturally and engage in AR theater with virtual audiences trained from real audiences using imitation learning . Virtual dancers emerge from the surroundings, accompanied by a digitally simulated audience .",
+    "link": "http://arxiv.org/abs/2511.02807v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02807.pdf",
+    "arxiv_id": "2511.02807",
+    "category": "cs.HC",
+    "published": "2025-11-04",
+    "relevance_score": 4,
+    "matched_keywords": [
+      "sentiment",
+      "art",
+      "audio"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research enhances speech processing.",
+    "interest_category": "Creative AI / Emotion"
+  },
+  {
+    "title": "Split Learning-Enabled Framework for Secure and Light-weight Internet of Medical Things Systems",
+    "summary": " Conventional deep learning methods are impractical due to resource limitations . Federated Learning (FL) suffers from high communication overhead and vulnerability to non-IID data . Split learning (SL) based framework for IoT malware detection through image-based classification .",
+    "link": "http://arxiv.org/abs/2511.00336v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.00336.pdf",
+    "arxiv_id": "2511.00336",
+    "category": "cs.CR",
+    "published": "2025-11-01",
+    "relevance_score": 8,
+    "matched_keywords": [
+      "iot",
+      "edge",
+      "resource",
+      "constrained",
+      "device"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research distributed machine learning across computer vision.",
+    "interest_category": "Lightweight Systems"
+  },
+  {
+    "title": "RL-Aided Cognitive ISAC: Robust Detection and Sensing-Communication Trade-offs",
+    "summary": " This paper proposes a reinforcement learning (RL)-aided cognitive framework for massive MIMO-based integrated sensing and communication (ISAC) systems . The focus is on enhancing radar sensing performance in environments with unknown and dynamic disturbance characteristics .",
+    "link": "http://arxiv.org/abs/2511.02672v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02672.pdf",
+    "arxiv_id": "2511.02672",
+    "category": "eess.SP",
+    "published": "2025-11-04",
+    "relevance_score": 1,
+    "matched_keywords": [
+      "edge"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research enhances edge computing.",
+    "interest_category": "Offline-First / Local AI"
+  },
+  {
+    "title": "Apriel-H1: Towards Efficient Enterprise Reasoning Models",
+    "summary": " Hybrid LLMs combine transformer attention and SSM sequence mixers for efficient reasoning at 15B model size . High inference throughput is critical for agentic tasks, long-context reasoning, efficient deployment under high request loads, and more efficient test-time compute scaling .",
+    "link": "http://arxiv.org/abs/2511.02651v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02651.pdf",
+    "arxiv_id": "2511.02651",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 6,
+    "matched_keywords": [
+      "efficient",
+      "distillation",
+      "inference"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research achieves better language AI.",
+    "interest_category": "Efficient ML / Edge AI"
+  },
+  {
+    "title": "Enhancing Federated Learning Privacy with QUBO",
+    "summary": " Federated learning (FL) is a widely used method for training machine learning (ML) models in a scalable way while preserving privacy . The risk of exposing sensitive data increases cumulatively as the number of iterations where a client's updates are included in the aggregated model increases . Attackers can launch membership inference attacks (MIA), property inference attacks, and model inversion attacks .",
+    "link": "http://arxiv.org/abs/2511.02785v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02785.pdf",
+    "arxiv_id": "2511.02785",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 6,
+    "matched_keywords": [
+      "privacy",
+      "federated"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research protecting data privacy in privacy-preserving AI.",
+    "interest_category": "Privacy-Preserving ML"
+  },
+  {
+    "title": "SigmaCollab: An Application-Driven Dataset for Physically Situated Collaboration",
+    "summary": " We introduce SigmaCollab, a dataset enabling research on physically situated human-AI collaboration . The dataset consists of a set of 85 sessions in which untrained participants were guided by a mixed-reality assistive AI agent in performing procedural tasks in the physical world .",
+    "link": "http://arxiv.org/abs/2511.02560v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02560.pdf",
+    "arxiv_id": "2511.02560",
+    "category": "cs.HC",
+    "published": "2025-11-04",
+    "relevance_score": 2,
+    "matched_keywords": [
+      "art",
+      "audio"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in speech processing.",
+    "interest_category": "Creative AI / Emotion"
+  },
+  {
+    "title": "Tetris: An SLA-aware Application Placement Strategy in the Edge-Cloud Continuum",
+    "summary": " An Edge-Cloud Continuum integrates edge and cloud resources to provide a flexible and scalable infrastructure . This paradigm can minimize latency by processing data closer to the source at the edge while leveraging the vast computational power of the cloud for more intensive tasks .",
+    "link": "http://arxiv.org/abs/2511.00294v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.00294.pdf",
+    "arxiv_id": "2511.00294",
+    "category": "cs.DC",
+    "published": "2025-10-31",
+    "relevance_score": 4,
+    "matched_keywords": [
+      "edge",
+      "resource"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research running AI locally on devices for edge computing.",
+    "interest_category": "Lightweight Systems"
+  },
+  {
+    "title": "VecComp: Vector Computing via MIMO Digital Over-the-Air Computation",
+    "summary": " ChannelComp framework has proposed digital over-the-air computation by designing digital modulations that enable the computation of arbitrary functions . This framework is intended for applications that favor local information processing over the mere acquisition of data .",
+    "link": "http://arxiv.org/abs/2511.02765v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02765.pdf",
+    "arxiv_id": "2511.02765",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 1,
+    "matched_keywords": [
+      "local"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research proposes a method for machine learning.",
+    "interest_category": "Offline-First / Local AI"
+  },
+  {
+    "title": "Can Visual Input Be Compressed? A Visual Token Compression Benchmark for Large Multimodal Models",
+    "summary": " Large multimodal models (LMMs) often suffer from severe inference inefficiency due to the large number of visual tokens introduced by image encoders . Recent token compression methods, such as pruning and merging, have shown promise in reducing redundancy . In this work, we present UniPruneBench, a unified and extensible benchmark for visual token pruning .",
+    "link": "http://arxiv.org/abs/2511.02650v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02650.pdf",
+    "arxiv_id": "2511.02650",
+    "category": "cs.CV",
+    "published": "2025-11-04",
+    "relevance_score": 8,
+    "matched_keywords": [
+      "efficient",
+      "compression",
+      "pruning",
+      "inference"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research reduces language AI.",
+    "interest_category": "Efficient ML / Edge AI"
+  },
+  {
+    "title": "GeoCrossBench: Cross-Band Generalization for Remote Sensing",
+    "summary": " GeoCrossBench is an extension of the popular GeoBench benchmark with a new evaluation protocol . It tests the in-distribution performance; generalization to satellites with no band overlap . ChiViT significantly outperforms the runner-up DINOv3 . Fine-tuning just the last linear layer of these models can get relatively consistent performance across all satellites .",
+    "link": "http://arxiv.org/abs/2511.02831v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02831.pdf",
+    "arxiv_id": "2511.02831",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 0,
+    "matched_keywords": [],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in machine learning.",
+    "interest_category": "Privacy-Preserving ML"
+  },
+  {
+    "title": "1 PoCo: Agentic Proof-of-Concept Exploit Generation for Smart Contracts",
+    "summary": " Smart contracts operate in a highly adversarial environment, where vulnerabilities can lead to substantial financial losses . POCO autonomously generates PoC exploits in an agentic manner by interacting with a set of code-execution tools in a Reason-Act-Observe loop .",
+    "link": "http://arxiv.org/abs/2511.02780v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02780.pdf",
+    "arxiv_id": "2511.02780",
+    "category": "cs.CR",
+    "published": "2025-11-04",
+    "relevance_score": 3,
+    "matched_keywords": [
+      "art"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in edge computing.",
+    "interest_category": "Creative AI / Emotion"
+  },
+  {
+    "title": "Edge AI in Highly Volatile Environments: Is Fairness Worth the Accuracy Trade-off?",
+    "summary": " Federated learning (FL) has emerged as a transformative paradigm for edge intelligence, enabling collaborative model training while preserving data privacy across distributed personal devices . The inherent volatility of edge environments poses significant challenges for achieving high accuracy and fairness in client participation .",
+    "link": "http://arxiv.org/abs/2511.01737v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.01737.pdf",
+    "arxiv_id": "2511.01737",
+    "category": "cs.LG",
+    "published": "2025-11-03",
+    "relevance_score": 6,
+    "matched_keywords": [
+      "edge",
+      "resource",
+      "device"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research protecting data privacy in privacy-preserving AI.",
+    "interest_category": "Lightweight Systems"
+  },
+  {
+    "title": "Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization",
+    "summary": " Hyperparameter optimization (HPO) based on Bayesian optimization (BO) supports users in designing models well-suited for a given dataset . HPO has proven its effectiveness on several applications, ranging from classical machine learning for tabular data to deep neural networks for computer vision and transformers for natural language processing .",
+    "link": "http://arxiv.org/abs/2511.02570v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02570.pdf",
+    "arxiv_id": "2511.02570",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 1,
+    "matched_keywords": [
+      "edge"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research optimizes computer vision.",
+    "interest_category": "Offline-First / Local AI"
+  },
+  {
+    "title": "Federated Attention: A Distributed Paradigm for Collaborative LLM Inference over Edge Networks",
+    "summary": " Large language models (LLMs) are proliferating rapidly at the edge, delivering intelligent capabilities across diverse application scenarios . However, their practical deployment in collaborative scenarios confronts challenges: privacy vulnerabilities, communication overhead, and computational bottlenecks . To address these, we propose Federated Attention (FedAttn), which integrates the federated paradigm into the self-attention mechanism .",
+    "link": "http://arxiv.org/abs/2511.02647v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02647.pdf",
+    "arxiv_id": "2511.02647",
+    "category": "cs.DC",
+    "published": "2025-11-04",
+    "relevance_score": 6,
+    "matched_keywords": [
+      "edge",
+      "inference"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research protecting data privacy in language AI.",
+    "interest_category": "Efficient ML / Edge AI"
+  },
+  {
+    "title": "Adam Reduces a Unique Form of Sharpness: Theoretical Insights Near the Minimizer Manifold",
+    "summary": " Adam implicitly reduces a unique form of sharpness measure shaped by its adaptive updates, leading to qualitatively different solutions from SGD . In solving sparse linear regression with diagonal linear networks, this distinction enables Adam to achieve better sparsity and generalization .",
+    "link": "http://arxiv.org/abs/2511.02773v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02773.pdf",
+    "arxiv_id": "2511.02773",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 1,
+    "matched_keywords": [
+      "differential"
+    ],
+    "difficulty": "🟡 Advanced",
+    "layman": "This research reduces machine learning.",
+    "interest_category": "Privacy-Preserving ML"
+  },
+  {
+    "title": "The Collaboration Gap",
+    "summary": " The trajectory of AI development suggests we will increasingly rely on agent-based systems composed of independently developed agents . Success of these systems will critically depend on effective collaboration among these heterogeneous agents . Few empirical studies have evaluated such agent-agent collaboration at scale . We propose a collaborative maze-solving benchmark that isolates collaborative capabilities .",
+    "link": "http://arxiv.org/abs/2511.02687v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02687.pdf",
+    "arxiv_id": "2511.02687",
+    "category": "cs.AI",
+    "published": "2025-11-04",
+    "relevance_score": 2,
+    "matched_keywords": [
+      "art",
+      "design"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in machine learning.",
+    "interest_category": "Creative AI / Emotion"
+  },
+  {
+    "title": "Energy-Efficient Hardware Acceleration of Whisper ASR on a CGLA",
+    "summary": " Whisper's core computational kernel was evaluated on a general-purpose Coarse-Grained Linear Arrays (CGLAs) accelerator . Whisper is 1.90x more efficient than the NVIDIA Jetson AGX Orin .",
+    "link": "http://arxiv.org/abs/2511.02269v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02269.pdf",
+    "arxiv_id": "2511.02269",
+    "category": "cs.AR",
+    "published": "2025-11-04",
+    "relevance_score": 4,
+    "matched_keywords": [
+      "edge",
+      "constrained",
+      "device"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research tackles the problem of speech processing.",
+    "interest_category": "Lightweight Systems"
+  },
+  {
+    "title": "Redundancy Maximization as a Principle of Associative Memory Learning",
+    "summary": " Associative memory, traditionally modeled by Hopfield networks, enables the retrieval of previously stored patterns from partial or noisy cues . We use redundancy as an information-theoretic learning goal, which is directly optimized for each neuron .",
+    "link": "http://arxiv.org/abs/2511.02584v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02584.pdf",
+    "arxiv_id": "2511.02584",
+    "category": "cs.IT",
+    "published": "2025-11-04",
+    "relevance_score": 1,
+    "matched_keywords": [
+      "local"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in machine learning.",
+    "interest_category": "Offline-First / Local AI"
+  },
+  {
+    "title": "TabTune: A Unified Library for Inference and Fine-Tuning Tabular Foundation Models",
+    "summary": " TabTune provides consistent access to seven state-of-the-art models supporting multiple adaptation strategies . The framework automates model-aware preprocessing, manages architectural heterogeneity internally, and integrates evaluation modules for performance, calibration, and fairness . The library is open source and available at https://github.com/Lexsi-Labs/TabTune .",
+    "link": "http://arxiv.org/abs/2511.02802v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02802.pdf",
+    "arxiv_id": "2511.02802",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 4,
+    "matched_keywords": [
+      "efficient",
+      "inference"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research presents techniques for machine learning.",
+    "interest_category": "Efficient ML / Edge AI"
+  },
+  {
+    "title": "Assessing win strength in MLB win prediction models",
+    "summary": " In Major League Baseball, strategy and planning are major factors in determining the outcome of a game . Previous studies have aided this by building machine learning models for predicting the winning team of any given game . We extend this work by training a comprehensive set of models using a common dataset .",
+    "link": "http://arxiv.org/abs/2511.02815v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02815.pdf",
+    "arxiv_id": "2511.02815",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 1,
+    "matched_keywords": [
+      "differential"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in machine learning.",
+    "interest_category": "Privacy-Preserving ML"
+  },
+  {
+    "title": "Neurosymbolic Deep Learning Semantics",
+    "summary": " Artificial Intelligence (AI) is a powerful new language of science as evidenced by recent Nobel Prizes in chemistry and physics . Yet, this new language lacks semantics, which makes AI's scientific discoveries unsatisfactory at best . In this paper, we argue that logic offers an adequate framework to offer a much needed semantics for deep learning .",
+    "link": "http://arxiv.org/abs/2511.02825v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02825.pdf",
+    "arxiv_id": "2511.02825",
+    "category": "cs.AI",
+    "published": "2025-11-04",
+    "relevance_score": 2,
+    "matched_keywords": [
+      "art",
+      "design"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in edge computing.",
+    "interest_category": "Creative AI / Emotion"
+  },
+  {
+    "title": "3D Point Cloud Object Detection on Edge Devices for Split Computing",
+    "summary": " Split Computing aims to lessen the computational burden on edge devices, thereby reducing processing time and power consumption . Split Computing reduces the inference time by 70.8% and the edge device execution time by 90.0% .",
+    "link": "http://arxiv.org/abs/2511.02293v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02293.pdf",
+    "arxiv_id": "2511.02293",
+    "category": "cs.DC",
+    "published": "2025-11-04",
+    "relevance_score": 6,
+    "matched_keywords": [
+      "edge",
+      "device"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research automatically finding edge computing.",
+    "interest_category": "Lightweight Systems"
+  },
+  {
+    "title": "From Solo to Symphony: Orchestrating Multi-Agent Collaboration with Single-Agent Demos",
+    "summary": " Solo-to-Collaborative RL (SoCo) is a framework that transfers solo knowledge into cooperative learning . SoCo pretrains a shared solo policy from solo demonstrations, then adapts it for cooperation during multi-agent training . It significantly boosts training efficiency and performance of backbone algorithms .",
+    "link": "http://arxiv.org/abs/2511.02762v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02762.pdf",
+    "arxiv_id": "2511.02762",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 2,
+    "matched_keywords": [
+      "offline",
+      "edge"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research makes more efficient edge computing.",
+    "interest_category": "Offline-First / Local AI"
+  },
+  {
+    "title": "Does Interpretability of Knowledge Tracing Models Support Teacher Decision Making?",
+    "summary": " Knowledge tracing (KT) models are a crucial basis for pedagogical decision-making . No study to date has investigated whether the interpretability of KT models actually helps human teachers to make teaching decisions .",
+    "link": "http://arxiv.org/abs/2511.02718v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02718.pdf",
+    "arxiv_id": "2511.02718",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 3,
+    "matched_keywords": [
+      "edge"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research running AI locally on devices for edge computing.",
+    "interest_category": "Efficient ML / Edge AI"
+  },
+  {
+    "title": "TWIST2: Scalable, Portable, and Holistic Humanoid Data Collection System",
+    "summary": " TWIST2 is a portable, mocap-free humanoid teleoperation and data collection system . System leverages PICO4U VR for obtaining real-time whole-body human motions . System is fully reproducible and open-sourced at https://yanjieze.com/TWIST2 .",
+    "link": "http://arxiv.org/abs/2511.02832v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02832.pdf",
+    "arxiv_id": "2511.02832",
+    "category": "cs.RO",
+    "published": "2025-11-04",
+    "relevance_score": 0,
+    "matched_keywords": [],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in language AI.",
+    "interest_category": "Privacy-Preserving ML"
+  },
+  {
+    "title": "Perceived Femininity in Singing Voice: Analysis and Prediction",
+    "summary": " This paper focuses on the often-overlooked aspect of perceived voice femininity in singing voices . The analysis of gender bias in music content could benefit from such study .",
+    "link": "http://arxiv.org/abs/2511.02726v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02726.pdf",
+    "arxiv_id": "2511.02726",
+    "category": "cs.SD",
+    "published": "2025-11-04",
+    "relevance_score": 4,
+    "matched_keywords": [
+      "music",
+      "art",
+      "design"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research explores techniques in speech processing.",
+    "interest_category": "Creative AI / Emotion"
+  },
+  {
+    "title": "FREESH: Fair, Resource- and Energy-Efficient Scheduling for LLM Serving on Heterogeneous GPUs",
+    "summary": " The ever-increasing computation and energy demand for LLM and AI agents call for holistic and efficient optimization of LLM serving systems . FREESH identifies optimal configurations of balanced load serving by matching distinct GPU instance's power-throughput characteristics with predictable LLM query length and workloads . During the 1-hour serving on production workloads, FREESH reduces energy by 28.6% and emissions by 45.45% .",
+    "link": "http://arxiv.org/abs/2511.00807v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.00807.pdf",
+    "arxiv_id": "2511.00807",
+    "category": "cs.DC",
+    "published": "2025-11-02",
+    "relevance_score": 4,
+    "matched_keywords": [
+      "iot",
+      "resource"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research optimizes language AI.",
+    "interest_category": "Lightweight Systems"
+  },
+  {
+    "title": "A Non-Adversarial Approach to Idempotent Generative Modelling",
+    "summary": " Idempotent Generative Networks (IGNs) are deep generative models that also function as local data manifold projectors, mapping arbitrary inputs back onto the manifold . IGNs suffer from mode collapse, mode dropping, and training instability due to their objectives .",
+    "link": "http://arxiv.org/abs/2511.02614v1",
+    "pdf_link": "https://arxiv.org/pdf/2511.02614.pdf",
+    "arxiv_id": "2511.02614",
+    "category": "cs.LG",
+    "published": "2025-11-04",
+    "relevance_score": 1,
+    "matched_keywords": [
+      "local"
+    ],
+    "difficulty": "🟢 Applied",
+    "layman": "This research creating new content with machine learning.",
+    "interest_category": "Offline-First / Local AI"
+  }
+];
+
+    // ============================================
+    // STATE MANAGEMENT
+    // ============================================
+    let likes = JSON.parse(localStorage.getItem('tiktok_likes') || '{}');
+    let currentPaperIndex = 0;
+
+    // ============================================
+    // RENDER FEED
+    // ============================================
+    function renderFeed() {
+      const container = document.getElementById('feed-container');
+
+      papers.forEach((paper, index) => {
+        const card = document.createElement('div');
+        card.className = 'paper-card';
+        card.dataset.index = index;
+
+        card.innerHTML = `
+          <div class="interest-badge">${paper.interest_category}</div>
+          <div class="difficulty-badge">${paper.difficulty}</div>
+
+          <h1 class="paper-title">${paper.title}</h1>
+
+          <div class="layman-box">💡 ${paper.layman}</div>
+
+          <div class="summary">${paper.summary}</div>
+
+          <div class="paper-meta">
+            <span class="category-tag">${paper.category}</span>
+            <span class="date">${paper.published}</span>
+          </div>
+
+          <div class="links">
+            <a href="${paper.link}" target="_blank">Abstract ↗</a>
+            <a href="${paper.pdf_link}" target="_blank">PDF ↗</a>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // ============================================
+    // LIKE SYSTEM
+    // ============================================
+    function getCurrentPaper() {
+      const container = document.getElementById('feed-container');
+      const scrollPos = container.scrollTop;
+      const windowHeight = window.innerHeight;
+
+      // Find which paper is currently in view
+      const cards = document.querySelectorAll('.paper-card');
+      for (let i = 0; i < cards.length; i++) {
+        const rect = cards[i].getBoundingClientRect();
+        if (rect.top >= -windowHeight/2 && rect.top < windowHeight/2) {
+          return i;
+        }
+      }
+      return 0;
+    }
+
+    function toggleLike() {
+      const paperIndex = getCurrentPaper();
+      const paper = papers[paperIndex];
+      const arxivId = paper.arxiv_id;
+
+      const heartIcon = document.getElementById('heartIcon');
+      const likeButton = document.getElementById('likeButton');
+
+      if (likes[arxivId]) {
+        // Unlike
+        delete likes[arxivId];
+        heartIcon.textContent = '♡';
+        likeButton.classList.remove('liked');
+      } else {
+        // Like
+        likes[arxivId] = {
+          arxiv_id: arxivId,
+          title: paper.title,
+          abstract_url: paper.link,
+          category: paper.category,
+          interest_category: paper.interest_category,
+          liked_date: new Date().toISOString(),
+          difficulty: paper.difficulty
+        };
+        heartIcon.textContent = '♥';
+        likeButton.classList.add('liked');
+      }
+
+      // Save to localStorage
+      localStorage.setItem('tiktok_likes', JSON.stringify(likes));
+
+      // Update counter and export button
+      updateCounter();
+      updateExportButton();
+    }
+
+    function updateLikeButton() {
+      const paperIndex = getCurrentPaper();
+      const paper = papers[paperIndex];
+      const heartIcon = document.getElementById('heartIcon');
+      const likeButton = document.getElementById('likeButton');
+
+      if (likes[paper.arxiv_id]) {
+        heartIcon.textContent = '♥';
+        likeButton.classList.add('liked');
+      } else {
+        heartIcon.textContent = '♡';
+        likeButton.classList.remove('liked');
+      }
+    }
+
+    function updateCounter() {
+      const count = Object.keys(likes).length;
+      document.getElementById('likeCount').textContent = count;
+    }
+
+    function updateExportButton() {
+      const exportButton = document.getElementById('exportButton');
+      if (Object.keys(likes).length > 0) {
+        exportButton.classList.add('active');
+      } else {
+        exportButton.classList.remove('active');
+      }
+    }
+
+    // ============================================
+    // EXPORT LIKES
+    // ============================================
+    function exportLikes() {
+      const likedPapers = Object.values(likes);
+
+      // Calculate category preferences
+      const preferences = {};
+      likedPapers.forEach(paper => {
+        const cat = paper.interest_category;
+        preferences[cat] = (preferences[cat] || 0) + 1;
+      });
+
+      const exportData = {
+        liked_papers: likedPapers,
+        preferences: preferences,
+        export_date: new Date().toISOString(),
+        total_likes: likedPapers.length
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json'
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `arxiv_likes_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+    document.getElementById('likeButton').addEventListener('click', toggleLike);
+    document.getElementById('exportButton').addEventListener('click', exportLikes);
+
+    // Update like button when scrolling
+    document.getElementById('feed-container').addEventListener('scroll', () => {
+      updateLikeButton();
+
+      // Hide scroll indicator after first scroll
+      const scrollIndicator = document.getElementById('scrollIndicator');
+      if (document.getElementById('feed-container').scrollTop > 50) {
+        scrollIndicator.classList.add('hide-indicator');
+      }
+    });
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    renderFeed();
+    updateLikeButton();
+    updateCounter();
+    updateExportButton();
+  </script>
+</body>
+</html>

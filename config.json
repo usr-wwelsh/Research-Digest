@@ -1,0 +1,84 @@
+{
+  "interests": {
+    "Efficient ML / Edge AI": {
+      "query": "cat:cs.LG OR cat:cs.CV OR cat:cs.CL",
+      "keywords": [
+        "efficient",
+        "edge",
+        "compression",
+        "quantization",
+        "pruning",
+        "distillation",
+        "inference",
+        "lightweight",
+        "mobile",
+        "accelerat"
+      ]
+    },
+    "Privacy-Preserving ML": {
+      "query": "cat:cs.CR OR cat:cs.LG",
+      "keywords": [
+        "privacy",
+        "federated",
+        "differential",
+        "secure",
+        "encrypted",
+        "confidential",
+        "private",
+        "anonymi"
+      ]
+    },
+    "Creative AI / Emotion": {
+      "query": "cat:cs.AI OR cat:cs.SD OR cat:cs.HC",
+      "keywords": [
+        "emotion",
+        "generative",
+        "creative",
+        "music",
+        "affective",
+        "sentiment",
+        "art",
+        "design",
+        "audio",
+        "synthesis"
+      ]
+    },
+    "Lightweight Systems": {
+      "query": "cat:cs.DC OR cat:cs.AR",
+      "keywords": [
+        "embedded",
+        "iot",
+        "edge",
+        "resource",
+        "constrained",
+        "microcontroller",
+        "low-power",
+        "sensor",
+        "device"
+      ]
+    },
+    "Offline-First / Local AI": {
+      "query": "cat:cs.LG",
+      "keywords": [
+        "local",
+        "device",
+        "mobile",
+        "offline",
+        "on-device",
+        "edge",
+        "browser",
+        "client-side",
+        "standalone"
+      ]
+    }
+  },
+  "settings": {
+    "papers_per_interest": 10,
+    "summary_max_length": 160,
+    "recent_days": 7,
+    "fallback_days": 90,
+    "min_papers_threshold": 5,
+    "fetch_multiplier": 5,
+    "user_agent": "ResearchDigestBot/1.0 (github.com/wedsmoker)"
+  }
+}
