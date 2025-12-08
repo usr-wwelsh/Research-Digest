@@ -30,7 +30,7 @@ def load_config():
             "fallback_days": 90,
             "min_papers_threshold": 5,
             "fetch_multiplier": 5,
-            "user_agent": "ResearchDigestBot/1.0 (github.com/wedsmoker)"
+            "user_agent": "ResearchDigestBot/1.0 (github.com/usr-wwelsh)"
         }
     }
 
@@ -675,7 +675,7 @@ if __name__ == "__main__":
         # FALLBACK: If we didn't get enough papers, try wider date range (only 1 extra request)
         if len(top_papers) < MIN_PAPERS_THRESHOLD and FALLBACK_DAYS > RECENT_DAYS:
             print(f"   🔄 Low yield, trying fallback search (last {FALLBACK_DAYS} days)...")
-            time.sleep(3)  # Respect rate limit before fallback request
+            time.sleep(5)  # Respect rate limit before fallback request
 
             xml_data_fallback = fetch_arxiv_papers(query, PAPERS_PER_INTEREST * FETCH_MULTIPLIER, days_back=FALLBACK_DAYS)
             papers_fallback = parse_papers(xml_data_fallback) if xml_data_fallback else []
@@ -708,8 +708,8 @@ if __name__ == "__main__":
             all_papers[interest_name] = top_papers
             print(f"   ✨ After fallback: {len(top_papers)} total papers")
 
-        # Be kind: 3-second delay between queries (arXiv recommendation)
-        time.sleep(3)
+        # Be kind: 5-second delay between queries (extra respectful to arXiv)
+        time.sleep(5)
 
     # Save updated seen papers
     save_seen_papers(seen_papers)

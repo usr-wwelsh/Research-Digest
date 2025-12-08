@@ -73,12 +73,12 @@
     }
   },
   "settings": {
-    "papers_per_interest": 10,
+    "papers_per_interest": 25,
     "summary_max_length": 160,
     "recent_days": 7,
     "fallback_days": 90,
     "min_papers_threshold": 5,
-    "fetch_multiplier": 5,
-    "user_agent": "ResearchDigestBot/1.0 (github.com/wedsmoker)"
+    "fetch_multiplier": 3,
+    "user_agent": "ResearchDigestBot/1.0 (github.com/usr-wwelsh)"
   }
 }
