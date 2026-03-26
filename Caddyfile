@@ -1,13 +1,26 @@
 :8080 {
 	root * /opt/research-digest
-	file_server browse
 
 	# Serve index.html as the landing page
 	handle / {
 		rewrite * /index.html
 	}
 
-	# Cache static assets but not the HTML (it updates weekly)
+	# Only serve HTML files and the archive directory
+	@allowed {
+		path *.html
+		path /arxiv_archive/*
+	}
+	handle @allowed {
+		file_server
+	}
+
+	# Block everything else
+	handle {
+		respond 404
+	}
+
+	# Cache archived digests but not the main pages (they update weekly)
 	header /arxiv_archive/* Cache-Control "public, max-age=604800"
 	header /*.html Cache-Control "no-cache, must-revalidate"
 
