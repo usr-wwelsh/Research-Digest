@@ -16,7 +16,7 @@ TEMPLATE="debian-12-standard" # Will auto-find the latest matching template
 MEMORY=4096                   # MB - peak during torch inference
 SWAP=512
 CORES=4
-DISK_SIZE="8"                 # GB
+DISK_SIZE="20"                # GB (torch ~4GB + model cache ~2GB + archives)
 BRIDGE="vmbr0"
 REPO_URL="https://github.com/usr-wwelsh/research-digest.git"
 NAMESERVER=""                 # Leave empty for DHCP default, or set e.g. "1.1.1.1"
@@ -109,6 +109,10 @@ for i in $(seq 1 30); do
     sleep 1
 done
 
+# --- Set root password for Proxmox web console ---
+log "Setting root password (default: research)..."
+pct exec "$CTID" -- bash -c "echo 'root:research' | chpasswd"
+
 # --- Bootstrap inside container ---
 log "Installing git..."
 pct exec "$CTID" -- bash -c "apt-get update -qq && apt-get install -y -qq git > /dev/null"
@@ -130,7 +134,8 @@ echo ""
 echo "  Hostname:  $HOSTNAME"
 echo "  CTID:      $CTID"
 echo "  IP:        ${CT_IP:-unknown (check DHCP)}"
-echo "  Caddy:     http://${CT_IP:-<IP>}:8080"
+echo "  Caddy:     http://${CT_IP:-<IP>}:8080  (use http://, not https://)"
+echo "  Console:   root / research  (change with: pct exec $CTID -- passwd root)"
 echo ""
 echo "  To enter the container:"
 echo "    pct enter $CTID"

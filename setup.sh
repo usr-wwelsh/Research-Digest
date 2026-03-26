@@ -50,9 +50,12 @@ else
     log "Caddy already installed."
 fi
 
-# Stop the default Caddy service (we use our own unit)
+# Kill and mask the default Caddy service — it conflicts with our own unit
+# (both try to bind the admin API on :2019)
 systemctl stop caddy 2>/dev/null || true
 systemctl disable caddy 2>/dev/null || true
+systemctl mask caddy 2>/dev/null || true
+pkill -9 caddy 2>/dev/null || true
 
 # --- 3. Cloudflared ---
 if ! command -v cloudflared &> /dev/null; then
