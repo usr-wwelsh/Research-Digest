@@ -2,9 +2,9 @@
 	root * /opt/research-digest
 	file_server browse
 
-	# Serve latest.html as the landing page
+	# Serve index.html as the landing page
 	handle / {
-		rewrite * /latest.html
+		rewrite * /index.html
 	}
 
 	# Cache static assets but not the HTML (it updates weekly)
