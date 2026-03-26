@@ -1,0 +1,21 @@
+[Unit]
+Description=Research Digest - Caddy web server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+ExecStart=/usr/bin/caddy run --config /opt/research-digest/Caddyfile
+ExecReload=/usr/bin/caddy reload --config /opt/research-digest/Caddyfile
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/research-digest/logs
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

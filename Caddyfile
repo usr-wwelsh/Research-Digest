@@ -1,0 +1,20 @@
+:8080 {
+	root * /opt/research-digest
+	file_server browse
+
+	# Serve latest.html as the landing page
+	handle / {
+		rewrite * /latest.html
+	}
+
+	# Cache static assets but not the HTML (it updates weekly)
+	header /arxiv_archive/* Cache-Control "public, max-age=604800"
+	header /*.html Cache-Control "no-cache, must-revalidate"
+
+	log {
+		output file /opt/research-digest/logs/caddy_access.log {
+			roll_size 10mb
+			roll_keep 3
+		}
+	}
+}
