@@ -120,6 +120,31 @@ Combine with `OR`/`AND`: `cat:cs.LG OR cat:cs.AI`
 
 ## 🔧 Advanced Usage
 
+### Proxmox LXC Deployment (One-Liner)
+
+**Want a self-hosted, always-on instance with Cloudflare Tunnel?**
+
+From your Proxmox host:
+
+```bash
+bash <(curl -sL https://raw.githubusercontent.com/usr-wwelsh/Research-Digest/main/create-lxc.sh)
+```
+
+This automatically:
+- Creates a Debian 12 LXC container (4GB RAM, 4 cores, 20GB disk)
+- Installs Python, Caddy web server, and cloudflared
+- Sets up the venv and all dependencies
+- Configures a weekly cron job (Monday 8am) with CPU/memory limits
+- Starts Caddy to serve digests on port 8080
+
+**After the script finishes:**
+1. Enter the container: `pct enter <CTID>`
+2. Edit `/opt/research-digest/config.json` with your research interests
+3. Set up [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) to expose it publicly
+4. Run a test: `/opt/research-digest/run.sh`
+
+Idle footprint is ~50-80MB RAM (Caddy + cloudflared). The weekly digest run spikes to ~4GB briefly for torch inference, then drops back down.
+
 ### Automated Daily Digests & Mobile Sync
 
 **Want automatic daily updates synced to your phone?**
@@ -146,7 +171,12 @@ research-digest/
 ├── generate_index.py        # Archive browser generator
 ├── generate_tiktok_feed.py  # Mobile feed generator
 ├── run_digest.bat           # Windows launcher
+├── run.sh                   # Linux pipeline runner (used by cron)
 ├── requirements.txt         # Python dependencies
+├── create-lxc.sh            # Proxmox LXC creator (run on host)
+├── setup.sh                 # Container bootstrap script
+├── Caddyfile                # Caddy web server config
+├── research-digest-caddy.service  # Systemd unit for Caddy
 ├── latest.html              # Latest digest (auto-generated)
 ├── index.html               # Archive browser (auto-generated)
 ├── tiktok_feed.html         # Mobile feed (auto-generated)
