@@ -10,7 +10,8 @@ set -euo pipefail
 # --- Configuration (tweak these) ---
 CTID="${1:-}"
 HOSTNAME="research-digest"
-STORAGE="local-lvm"          # Change to your storage (local-lvm, zfs, etc.)
+STORAGE="local-lvm"          # Storage for container rootfs (local-lvm, zfs, etc.)
+TEMPLATE_STORAGE="local"     # Storage for templates (must support 'vztmpl' content type)
 TEMPLATE="debian-12-standard" # Will auto-find the latest matching template
 MEMORY=4096                   # MB - peak during torch inference
 SWAP=512
@@ -47,15 +48,15 @@ fi
 
 # --- Find template ---
 log "Looking for Debian 12 template..."
-TEMPLATE_PATH=$(pveam list "$STORAGE" 2>/dev/null | grep -i "$TEMPLATE" | tail -1 | awk '{print $1}' || true)
+TEMPLATE_PATH=$(pveam list "$TEMPLATE_STORAGE" 2>/dev/null | grep -i "$TEMPLATE" | tail -1 | awk '{print $1}' || true)
 
 if [ -z "$TEMPLATE_PATH" ]; then
     log "Template not found in storage, downloading..."
     pveam update
     TEMPLATE_DL=$(pveam available --section system | grep -i "$TEMPLATE" | tail -1 | awk '{print $2}')
     [ -z "$TEMPLATE_DL" ] && err "Could not find a Debian 12 template to download"
-    pveam download "$STORAGE" "$TEMPLATE_DL"
-    TEMPLATE_PATH=$(pveam list "$STORAGE" | grep -i "$TEMPLATE" | tail -1 | awk '{print $1}')
+    pveam download "$TEMPLATE_STORAGE" "$TEMPLATE_DL"
+    TEMPLATE_PATH=$(pveam list "$TEMPLATE_STORAGE" | grep -i "$TEMPLATE" | tail -1 | awk '{print $1}')
 fi
 
 log "Using template: $TEMPLATE_PATH"
