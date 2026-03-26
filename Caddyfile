@@ -1,17 +1,14 @@
 :8080 {
 	root * /opt/research-digest
 
-	# Serve index.html as the landing page
-	handle / {
-		rewrite * /index.html
-	}
-
 	# Only serve HTML files and the archive directory
 	@allowed {
+		path /
 		path *.html
 		path /arxiv_archive/*
 	}
 	handle @allowed {
+		rewrite / /index.html
 		file_server
 	}
 
