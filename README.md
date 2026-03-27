@@ -4,9 +4,9 @@
 ![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgrey.svg)
 
 ![research-digest status](https://vitals.wwel.sh/badge/proxmox/research-digest/status.svg)
+![research-digest uptime](https://vitals.wwel.sh/badge/proxmox/research-digest/uptime.svg)
 ![research-digest cpu](https://vitals.wwel.sh/badge/proxmox/research-digest/cpu.svg)
 ![research-digest ram](https://vitals.wwel.sh/badge/proxmox/research-digest/ram.svg)
-![research-digest uptime](https://vitals.wwel.sh/badge/proxmox/research-digest/uptime.svg)
 ![research-digest cpu trend](https://vitals.wwel.sh/badge/proxmox/research-digest/sparkline.svg?metric=cpu)
 ![research-digest ram trend](https://vitals.wwel.sh/badge/proxmox/research-digest/sparkline.svg?metric=ram)
 
