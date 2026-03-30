@@ -129,7 +129,7 @@ log "Setting up weekly cron job ($CRON_SCHEDULE)..."
 CRON_CMD="$CRON_SCHEDULE www-data systemd-run --scope -p CPUQuota=200\\% -p MemoryMax=4G $INSTALL_DIR/run.sh"
 
 # Write to /etc/cron.d/ (cleaner than user crontab)
-echo "$CRON_CMD" > /etc/cron.d/research-digest
+printf 'SHELL=/bin/bash\n%s\n' "$CRON_CMD" > /etc/cron.d/research-digest
 chmod 644 /etc/cron.d/research-digest
 
 log "=== Setup complete! ==="
