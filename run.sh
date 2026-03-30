@@ -26,6 +26,10 @@ source "$VENV_DIR/bin/activate"
 
 cd "$SCRIPT_DIR"
 
+# HuggingFace model cache — www-data can't write to /var/www
+export HF_HOME="$SCRIPT_DIR/.hf_cache"
+mkdir -p "$HF_HOME"
+
 # Fetch papers and generate digest
 log "Fetching papers and generating digest..."
 if python main.py >> "$LOG_FILE" 2>&1; then
