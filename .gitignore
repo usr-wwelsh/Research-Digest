@@ -1,6 +1,9 @@
 # Per-deployment secrets / env (TURBOLAB_URL etc.)
 .env
 
+# Local design notes (kept out of the repo)
+V2_PLAN.md
+
 # Virtual Environment
 venv/
 env/
