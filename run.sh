@@ -1,54 +1,46 @@
 #!/bin/bash
-# Research Digest - Weekly pipeline runner
-# Fetches papers, generates HTML digests, and updates the archive index.
+# Research Digest v2 — pipeline runner.
+#
+# Stages are independent; only fetch touches arXiv, and its failure is non-fatal
+# (a rate limit just means no new papers — the corpus and site stay intact).
+# render is the gate: it refuses to publish an empty corpus.
+#
+#   ./run.sh            full pipeline: fetch -> summarize -> embed -> relate -> render
+#   ./run.sh --offline  skip fetch (rebuild from the existing corpus; no network)
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VENV_DIR="$SCRIPT_DIR/venv"
+PY="$SCRIPT_DIR/venv/bin/python"
 LOG_FILE="$SCRIPT_DIR/logs/digest_$(date +%Y%m%d_%H%M%S).log"
-
 mkdir -p "$SCRIPT_DIR/logs"
 
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
-}
+log() { echo "[$(date '+%F %T')] $*" | tee -a "$LOG_FILE"; }
+run() { log "→ $1"; if "$PY" "$1" >>"$LOG_FILE" 2>&1; then log "  ok"; else log "  FAILED: $1"; return 1; fi; }
 
-log "=== Research Digest pipeline starting ==="
-
-# Activate venv
-if [ ! -d "$VENV_DIR" ]; then
-    log "ERROR: Virtual environment not found at $VENV_DIR"
-    log "Run setup.sh first or create it manually: python3 -m venv $VENV_DIR"
-    exit 1
-fi
-source "$VENV_DIR/bin/activate"
-
+[ -x "$PY" ] || { log "ERROR: venv missing at $SCRIPT_DIR/venv — run setup.sh"; exit 1; }
 cd "$SCRIPT_DIR"
 
-# HuggingFace model cache — www-data can't write to /var/www
-export HF_HOME="$SCRIPT_DIR/.hf_cache"
-mkdir -p "$HF_HOME"
+# Per-deployment env (e.g. TURBOLAB_URL); gitignored so the LAN IP stays out of the repo.
+[ -f "$SCRIPT_DIR/.env" ] && { set -a; . "$SCRIPT_DIR/.env"; set +a; }
 
-# Fetch papers and generate digest
-log "Fetching papers and generating digest..."
-if python main.py >> "$LOG_FILE" 2>&1; then
-    log "Digest generated successfully."
+log "=== Research Digest pipeline ==="
+
+if [ "${1:-}" = "--offline" ]; then
+    log "offline mode: skipping fetch"
 else
-    log "ERROR: main.py failed (exit code $?)"
+    run fetch.py || log "fetch failed — continuing with existing corpus"
+fi
+
+run summarize.py || true   # turbolab stages skip gracefully if unreachable
+run embed.py || true
+run relate.py || true
+
+if run render.py; then
+    log "=== pipeline complete ==="
+else
+    log "=== render refused (empty corpus?) — site left unchanged ==="
     exit 1
 fi
 
-# Generate archive index
-log "Generating archive index..."
-if python generate_index.py >> "$LOG_FILE" 2>&1; then
-    log "Index generated successfully."
-else
-    log "ERROR: generate_index.py failed (exit code $?)"
-    exit 1
-fi
-
-# Clean up old logs (keep last 12 weeks)
 find "$SCRIPT_DIR/logs" -name "digest_*.log" -mtime +84 -delete 2>/dev/null || true
-
-log "=== Pipeline complete ==="

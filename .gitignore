@@ -1,3 +1,6 @@
+# Per-deployment secrets / env (TURBOLAB_URL etc.)
+.env
+
 # Virtual Environment
 venv/
 env/
@@ -17,8 +20,12 @@ arxiv_archive/
 
 # Generated Files
 seen_papers.json
+digest.db
 latest.html
 index.html
+archive.html
+feed.html
+.hf_cache/
 
 # Syncthing
 .stfolder/
