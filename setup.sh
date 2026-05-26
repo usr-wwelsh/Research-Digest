@@ -84,7 +84,7 @@ if [ ! -d "$INSTALL_DIR/venv" ]; then
     python3 -m venv "$INSTALL_DIR/venv"
 fi
 
-log "Installing Python dependencies (this may take a while - torch is large)..."
+log "Installing Python dependencies (jinja2, numpy, requests — lightweight)..."
 "$INSTALL_DIR/venv/bin/pip" install --upgrade pip -q
 "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt" -q
 
@@ -126,10 +126,10 @@ echo ""
 
 # --- 8. Cron job ---
 log "Setting up weekly cron job ($CRON_SCHEDULE)..."
-CRON_CMD="$CRON_SCHEDULE www-data systemd-run --scope -p CPUQuota=200\\% -p MemoryMax=4G $INSTALL_DIR/run.sh"
-
-# Write to /etc/cron.d/ (cleaner than user crontab)
-printf 'SHELL=/bin/bash\n%s\n' "$CRON_CMD" > /etc/cron.d/research-digest
+# Run run.sh directly as www-data. No systemd-run wrapper: a non-root user can't
+# create a transient scope from cron (it needs interactive polkit auth), which
+# silently broke the job every week. The LXC already caps CPU/RAM at the container level.
+printf 'SHELL=/bin/bash\n%s www-data %s/run.sh\n' "$CRON_SCHEDULE" "$INSTALL_DIR" > /etc/cron.d/research-digest
 chmod 644 /etc/cron.d/research-digest
 
 log "=== Setup complete! ==="
@@ -140,6 +140,11 @@ echo "  Logs: $INSTALL_DIR/logs/"
 echo ""
 echo "  Next steps:"
 echo "    1. Edit $INSTALL_DIR/config.json with your research interests"
-echo "    2. Run a test: sudo -u www-data $INSTALL_DIR/run.sh"
-echo "    3. Set up the Cloudflare tunnel (see instructions above)"
+echo "    2. Point at your turbolab server (keeps the LAN IP out of the public repo):"
+echo "         echo 'export TURBOLAB_URL=http://YOUR_HOST:7860' | sudo tee $INSTALL_DIR/.env"
+echo "         sudo chown www-data:www-data $INSTALL_DIR/.env"
+echo "    3. (optional) Recover an existing backlog from old digests:"
+echo "         sudo -u www-data $INSTALL_DIR/venv/bin/python $INSTALL_DIR/migrate_from_html.py"
+echo "    4. First build: sudo -u www-data $INSTALL_DIR/run.sh"
+echo "    5. Set up the Cloudflare tunnel (see instructions above)"
 echo ""

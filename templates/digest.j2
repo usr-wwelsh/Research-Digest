@@ -1,0 +1,55 @@
+{% extends "base.j2" %}
+{% block title %}arXiv Digest • {{ generated }}{% endblock %}
+{% set DIFF = {"Applied": ("d-applied", "🟢"), "Advanced": ("d-advanced", "🟡"), "Theory-Heavy": ("d-theory", "🔴")} %}
+{% block body %}
+  <header style="text-align:center; margin-bottom:1.5rem;">
+    <h1>arXiv Research Digest</h1>
+    <div class="meta">{{ generated }} • {{ shown }} papers across {{ groups|length }} interests</div>
+  </header>
+
+  <input class="searchbar" id="q" type="search" placeholder="Filter papers by title, summary, or tag…" autocomplete="off" />
+
+  {% for interest, papers in groups.items() %}
+  <section class="interest-section">
+    <div class="interest-header"><span>🔬</span><h2 class="interest-title">{{ interest }}</h2></div>
+    <div class="papers-grid">
+      {% for p in papers %}
+      {% set d = DIFF.get(p.difficulty, ("", "")) %}
+      <article class="paper" data-text="{{ p.search_text }}">
+        {% if p.difficulty %}<span class="difficulty-badge {{ d[0] }}">{{ d[1] }} {{ p.difficulty }}</span>{% endif %}
+        <h3>{{ p.title }}</h3>
+        {% if p.layman %}<div class="layman-box">💡 {{ p.layman }}</div>{% endif %}
+        <div class="summary">{{ p.display }}</div>
+        {% if p.tags %}<div class="tags">{% for t in p.tags %}<span class="tag">{{ t }}</span>{% endfor %}</div>{% endif %}
+        {% if p.related_papers %}
+        <div class="related">Related:
+          {% for r in p.related_papers %}<a href="{{ r.url }}" target="_blank" rel="noopener" title="{{ r.title }}">{{ r.title|truncate(40) }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
+        </div>{% endif %}
+        <div class="paper-footer">
+          <span class="category-tag">{{ p.primary_category or "—" }}</span>
+          <span class="date">{{ p.published or "" }}</span>
+        </div>
+        <div class="links">
+          <a href="{{ p.abs_url }}" target="_blank" rel="noopener">Abstract ↗</a>
+          <a href="{{ p.pdf_url }}" target="_blank" rel="noopener">PDF ↗</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+
+  <script>
+    const q = document.getElementById('q');
+    q.addEventListener('input', () => {
+      const t = q.value.toLowerCase().trim();
+      document.querySelectorAll('.paper').forEach(c => {
+        c.style.display = (!t || c.dataset.text.includes(t)) ? '' : 'none';
+      });
+      document.querySelectorAll('.interest-section').forEach(s => {
+        const any = [...s.querySelectorAll('.paper')].some(c => c.style.display !== 'none');
+        s.style.display = any ? '' : 'none';
+      });
+    });
+  </script>
+{% endblock %}
