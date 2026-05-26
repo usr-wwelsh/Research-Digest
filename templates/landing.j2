@@ -1,0 +1,36 @@
+{% extends "base.j2" %}
+{% block title %}Research Digest — self-hosted arXiv feed{% endblock %}
+{% block extra_css %}
+    .hero { text-align: center; padding: 3rem 1rem 2rem; max-width: 760px; margin: 0 auto; }
+    .hero p { color: var(--text); font-size: 1.05rem; line-height: 1.7; margin: 1.2rem 0; }
+    .hero .lead { color: var(--muted); font-size: 1.15rem; }
+    .cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin: 2rem 0; }
+    .btn { padding: 0.9rem 1.8rem; border-radius: 10px; font-weight: 700; font-size: 1rem; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { color: #fff; opacity: 0.9; }
+    .btn-ghost { border: 1px solid var(--border); color: var(--text); }
+    .runbox { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.3rem 1.5rem; margin: 2rem auto 0; max-width: 640px; font-size: 0.95rem;
+      color: var(--muted); }
+    .runbox a { font-weight: 700; }
+{% endblock %}
+{% block body %}
+  <div class="hero">
+    <h1>arXiv Research Digest</h1>
+    <p class="lead">An auto-curated arXiv feed with AI-written plain-language summaries.
+      No API keys, no cloud — runs on your own hardware.</p>
+    <p>You're looking at a live instance. Every paper's summary, plain-English explanation,
+      and topical tags are generated locally by <a href="{{ projects.turbolab }}">turbolab</a>,
+      a self-hosted, OpenAI-compatible model server — nothing is sent to a third party.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="latest.html">📰 View Latest Digest</a>
+      <a class="btn btn-ghost" href="archive.html">🗄 Browse Archive</a>
+    </div>
+    <div class="runbox">
+      <strong>Run your own.</strong> It's two self-hosted pieces:
+      <a href="{{ projects.research_digest }}">research-digest</a> (this app) +
+      <a href="{{ projects.turbolab }}">turbolab</a> (the model server that writes the summaries).
+      Currently tracking <strong>{{ total }}</strong> papers.
+    </div>
+  </div>
+{% endblock %}
