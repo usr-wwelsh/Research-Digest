@@ -1,27 +1,27 @@
-"""Summarize stage — fill papers missing a turbolab summary. Offline-safe, idempotent.
+"""Summarize stage — fill papers missing a summary. Offline, idempotent, no network.
 
 Reads the best available text (original abstract, or the salvaged text placeholder),
-asks turbolab for a structured summary, and stores summary/layman/difficulty + topical
-tags. Papers turbolab can't process this run are simply left for the next run.
+runs it through the local DistilBART summarizer, and stores summary/layman/difficulty +
+topical tags. Papers left unprocessed (model unavailable) are simply left for the next run.
 """
 import sys
 
 import db
-import turbolab
+import local_ai
 
 
 def main():
     conn = db.connect()
     rows = db.papers_missing_summary(conn)
-    print(f"Summarize: {len(rows)} papers need a summary (turbolab @ {turbolab.CFG['url']})")
-    if rows and not turbolab.healthcheck():
-        print("  turbolab unreachable — skipping this stage (papers stay queued).")
+    print(f"Summarize: {len(rows)} papers need a summary ({local_ai.CFG['summarizer_model']})")
+    if rows and not local_ai.summarizer_available():
+        print("  summarizer unavailable — skipping this stage (papers stay queued).")
         return
 
     done = 0
     for r in rows:
         text = r["abstract"] or r["title"]
-        res = turbolab.summarize(r["title"], text)
+        res = local_ai.summarize(r["title"], text, category=r["primary_category"], interest=r["interest"])
         if not res:
             continue
         db.update_paper(
@@ -29,7 +29,7 @@ def main():
             summary=res["summary"],
             layman=res["layman"],
             difficulty=res["difficulty"],
-            summary_model=turbolab.CFG["chat_model"],
+            summary_model=local_ai.CFG["summarizer_model"],
             summary_at=db.now_iso(),
         )
         if res["tags"]:

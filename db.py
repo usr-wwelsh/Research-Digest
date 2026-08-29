@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS papers (
     pdf_url                 TEXT,
     fetched_at              TEXT,
     needs_abstract_backfill INTEGER DEFAULT 0,
-    -- turbolab-generated (summarize stage)
+    -- generated locally (summarize stage)
     summary                 TEXT,
     layman                  TEXT,
     difficulty              TEXT,
@@ -90,7 +90,7 @@ def connect(path=DB_PATH):
     return conn
 
 
-# --- vectors: little-endian float32, matching turbolab's blob layout ---
+# --- vectors: little-endian float32 ---
 
 def vec_to_blob(vec):
     return struct.pack("<%df" % len(vec), *vec)
@@ -120,7 +120,7 @@ def upsert_paper(conn, arxiv_id, **cols):
     """Insert a paper or update the given columns. Used by salvage/fetch.
 
     Only the columns passed are touched, so stages never clobber each other
-    (e.g. fetch writing the abstract won't wipe an existing turbolab summary).
+    (e.g. fetch writing the abstract won't wipe an existing summary).
     """
     cols = _coerce(cols)
     keys = ["arxiv_id"] + list(cols)

@@ -81,14 +81,8 @@
     "fetch_multiplier": 3,
     "user_agent": "ResearchDigestBot/2.0 (github.com/usr-wwelsh)"
   },
-  "turbolab": {
-    "url": "http://localhost:7860",
-    "chat_model": "default",
-    "embed_model": "default",
-    "passage_prefix": "passage: ",
-    "query_prefix": "query: ",
-    "chat_timeout": 120,
-    "embed_timeout": 30,
-    "retries": 4
+  "local_ai": {
+    "summarizer_model": "sshleifer/distilbart-cnn-12-6",
+    "embedding_model": "distilbert-base-uncased"
   }
 }

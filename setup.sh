@@ -84,9 +84,14 @@ if [ ! -d "$INSTALL_DIR/venv" ]; then
     python3 -m venv "$INSTALL_DIR/venv"
 fi
 
-log "Installing Python dependencies (jinja2, numpy, requests — lightweight)..."
+log "Installing Python dependencies (this pulls CPU-only torch + transformers, ~1GB)..."
 "$INSTALL_DIR/venv/bin/pip" install --upgrade pip -q
 "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt" -q
+
+log "Pre-downloading summarizer/embedding model weights (~650MB, one-time)..."
+export HF_HOME="$INSTALL_DIR/.hf_cache"
+mkdir -p "$HF_HOME"
+"$INSTALL_DIR/venv/bin/python" -c "import local_ai; local_ai.warm()"
 
 # --- 5. Set permissions ---
 chown -R www-data:www-data "$INSTALL_DIR"
@@ -140,11 +145,8 @@ echo "  Logs: $INSTALL_DIR/logs/"
 echo ""
 echo "  Next steps:"
 echo "    1. Edit $INSTALL_DIR/config.json with your research interests"
-echo "    2. Point at your turbolab server (keeps the LAN IP out of the public repo):"
-echo "         echo 'export TURBOLAB_URL=http://YOUR_HOST:7860' | sudo tee $INSTALL_DIR/.env"
-echo "         sudo chown www-data:www-data $INSTALL_DIR/.env"
-echo "    3. (optional) Recover an existing backlog from old digests:"
+echo "    2. (optional) Recover an existing backlog from old digests:"
 echo "         sudo -u www-data $INSTALL_DIR/venv/bin/python $INSTALL_DIR/migrate_from_html.py"
-echo "    4. First build: sudo -u www-data $INSTALL_DIR/run.sh"
-echo "    5. Set up the Cloudflare tunnel (see instructions above)"
+echo "    3. First build: sudo -u www-data $INSTALL_DIR/run.sh"
+echo "    4. Set up the Cloudflare tunnel (see instructions above)"
 echo ""

@@ -21,8 +21,12 @@ run() { log "→ $1"; if "$PY" "$1" >>"$LOG_FILE" 2>&1; then log "  ok"; else lo
 [ -x "$PY" ] || { log "ERROR: venv missing at $SCRIPT_DIR/venv — run setup.sh"; exit 1; }
 cd "$SCRIPT_DIR"
 
-# Per-deployment env (e.g. TURBOLAB_URL); gitignored so the LAN IP stays out of the repo.
+# Per-deployment env, gitignored.
 [ -f "$SCRIPT_DIR/.env" ] && { set -a; . "$SCRIPT_DIR/.env"; set +a; }
+
+# HuggingFace model cache — www-data can't write to its own home under /var/www.
+export HF_HOME="$SCRIPT_DIR/.hf_cache"
+mkdir -p "$HF_HOME"
 
 log "=== Research Digest pipeline ==="
 
@@ -32,7 +36,7 @@ else
     run fetch.py || log "fetch failed — continuing with existing corpus"
 fi
 
-run summarize.py || true   # turbolab stages skip gracefully if unreachable
+run summarize.py || true   # local model stages skip gracefully if a model is unavailable
 run embed.py || true
 run relate.py || true
 

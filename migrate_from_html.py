@@ -2,7 +2,7 @@
 
 Touches no network. v1 only kept the *summarised* text (not the original abstract),
 so that text is stored as the `abstract` placeholder and `needs_abstract_backfill`
-is set — fetch.py batch-refetches the originals later via id_list. The turbolab
+is set — fetch.py batch-refetches the originals later via id_list. The
 summary/layman/difficulty fields are left empty so the summarize stage regenerates them.
 """
 import os

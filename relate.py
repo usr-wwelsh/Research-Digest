@@ -1,7 +1,7 @@
 """Relate stage — precompute nearest-neighbour papers from embeddings (cosine).
 
-Tags come from turbolab in the summarize stage; this stage only fills each paper's
-`related` list so the static site can show "related papers" without a live query.
+Tags come from the summarize stage; this stage only fills each paper's `related`
+list so the static site can show "related papers" without a live query.
 """
 import numpy as np
 

@@ -1,26 +1,26 @@
-"""Embed stage — fill papers missing a vector via turbolab's e5 model. Offline-safe, idempotent."""
+"""Embed stage — fill papers missing a vector via local DistilBERT. Offline, idempotent."""
 import db
-import turbolab
+import local_ai
 
 
 def main():
     conn = db.connect()
     rows = db.papers_missing_embedding(conn)
-    print(f"Embed: {len(rows)} papers need a vector (turbolab @ {turbolab.CFG['url']})")
-    if rows and not turbolab.healthcheck():
-        print("  turbolab unreachable — skipping this stage (papers stay queued).")
+    print(f"Embed: {len(rows)} papers need a vector ({local_ai.CFG['embedding_model']})")
+    if rows and not local_ai.embedder_available():
+        print("  embedder unavailable — skipping this stage (papers stay queued).")
         return
 
     done = 0
     for r in rows:
         text = r["abstract"] or r["title"]
-        vec = turbolab.embed(text, kind="passage")
+        vec = local_ai.embed(text)
         if not vec:
             continue
         db.update_paper(
             conn, r["arxiv_id"],
             embedding=db.vec_to_blob(vec),
-            embedding_model=turbolab.CFG["embed_model"],
+            embedding_model=local_ai.CFG["embedding_model"],
             embedded_at=db.now_iso(),
         )
         done += 1

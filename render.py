@@ -1,7 +1,7 @@
 """Render stage — build the static site from the DB. Atomic, refuses to publish empty.
 
 Outputs (all match the Caddy allowlist of /, *.html, /arxiv_archive/*):
-  index.html    landing/about page (links research-digest + turbolab, Latest/Archive)
+  index.html    landing/about page (links research-digest, Latest/Archive)
   latest.html   current digest, desktop grid, grouped by interest
   archive.html  list of dated snapshots
   feed.html     mobile feed with client-side keyword filter
@@ -24,7 +24,6 @@ ARCHIVE_DIR = os.path.join(SCRIPT_DIR, "arxiv_archive")
 
 PROJECTS = {
     "research_digest": "https://git.wwel.sh/research-digest",
-    "turbolab": "https://git.wwel.sh/turbolab",
     "portfolio": "https://wwel.sh",
 }
 
