@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings • Research Digest</title>
+  <link rel="manifest" href="../manifest.json" />
+  <meta name="theme-color" content="#0f0f0f" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <div id="nav"></div>
+    <h1>Interests</h1>
+    <p class="summary">
+      Each interest is fetched from its enabled sources and scored against its keywords.
+      This lives only on this device — no account, no server-side config.
+    </p>
+    <div id="rows"></div>
+    <div class="links">
+      <button id="add-btn" class="btn" type="button">+ Add interest</button>
+      <button id="save-btn" class="btn" type="button">Save changes</button>
+      <button id="reset-btn" class="btn btn-danger" type="button">Reset to defaults</button>
+    </div>
+  </div>
+  <script type="module" src="pwa.js"></script>
+  <script type="module" src="settings.js"></script>
+</body>
+</html>

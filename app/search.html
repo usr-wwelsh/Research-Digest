@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Search • Research Digest</title>
+  <link rel="manifest" href="../manifest.json" />
+  <meta name="theme-color" content="#0f0f0f" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <div id="nav"></div>
+    <h1>Search</h1>
+    <input id="q" class="searchbar" type="search" placeholder="Search arXiv, Semantic Scholar, OpenReview…" autocomplete="off" />
+    <div class="papers-grid" id="results"></div>
+    <div id="empty" class="empty" hidden>No results. Try a different search.</div>
+    <div id="hint" class="empty">Search live across all three sources — results here aren't in your digest yet.</div>
+  </div>
+  <script type="module" src="pwa.js"></script>
+  <script type="module" src="search.js"></script>
+</body>
+</html>

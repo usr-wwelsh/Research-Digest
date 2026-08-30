@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { normalizeEntry, dateFilter } from "../sources/arxiv.js";
+import { normalizeEntry, dateFilter, buildSearchQuery } from "../sources/arxiv.js";
 import { normalizeResult, parseResponse as parseS2Response } from "../sources/semanticscholar.js";
 import { normalizeNote, parseResponse as parseOpenReviewResponse } from "../sources/openreview.js";
 
@@ -53,6 +53,21 @@ test("arxiv dateFilter is empty for zero/negative/missing days", () => {
 test("arxiv dateFilter builds a submittedDate range", () => {
   const f = dateFilter(7);
   assert.match(f, /^submittedDate:\[\d{8}0000 TO \d{8}2359\]$/);
+});
+
+test("arxiv buildSearchQuery prefers query_by_source.arxiv when present", () => {
+  const q = buildSearchQuery({ query_by_source: { arxiv: "cat:cs.LG" }, query: "ignored" }, 0);
+  assert.equal(q, "cat:cs.LG");
+});
+
+test("arxiv buildSearchQuery falls back to a free-text keyword query for a custom interest", () => {
+  const q = buildSearchQuery({ keywords: ["edge", "quantization"] }, 0);
+  assert.equal(q, "all:edge OR quantization");
+});
+
+test("arxiv buildSearchQuery appends the date filter when recentDays is set", () => {
+  const q = buildSearchQuery({ query: "cat:cs.LG" }, 7);
+  assert.match(q, /^\(cat:cs\.LG\) AND submittedDate:\[/);
 });
 
 // --- semanticscholar.js: fully JSON, fully pure ---

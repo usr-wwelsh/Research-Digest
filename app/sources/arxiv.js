@@ -79,10 +79,20 @@ export function parseFeed(xmlText) {
     .filter(Boolean);
 }
 
-export async function fetchForInterest(interest, { recentDays = 7, maxResults = 60 } = {}) {
+// A category query (query_by_source.arxiv / the legacy config.json shape)
+// wins when present; a user-added interest with no category filter falls
+// back to a free-text query over its keywords, same as the other sources.
+export function buildSearchQuery(interest, recentDays) {
   const df = dateFilter(recentDays);
-  const query = (interest.query_by_source && interest.query_by_source.arxiv) || interest.query;
-  const searchQuery = df ? `(${query}) AND ${df}` : query;
+  const query =
+    (interest.query_by_source && interest.query_by_source.arxiv) ||
+    interest.query ||
+    `all:${(interest.keywords || []).join(" OR ")}`;
+  return df ? `(${query}) AND ${df}` : query;
+}
+
+export async function fetchForInterest(interest, { recentDays = 7, maxResults = 60 } = {}) {
+  const searchQuery = buildSearchQuery(interest, recentDays);
   const params = new URLSearchParams({
     search_query: searchQuery,
     start: "0",

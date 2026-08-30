@@ -25,13 +25,14 @@ node_modules/
 arxiv_archive/
 *.pdf
 
-# Generated Files
+# Generated Files (root-level only — app/*.html is hand-written source)
 seen_papers.json
 digest.db
-latest.html
-index.html
-archive.html
-feed.html
+/latest.html
+/index.html
+/archive.html
+/feed.html
+/seed-corpus.json
 .hf_cache/
 vendor/ort/
 
