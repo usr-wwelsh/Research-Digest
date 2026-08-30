@@ -1,7 +1,7 @@
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![arXiv](https://img.shields.io/badge/arXiv-API-red.svg)
-![Summaries](https://img.shields.io/badge/summaries-distilbert-ff6b6b.svg)
+![PWA](https://img.shields.io/badge/installable-PWA-6ba3ff.svg)
+![Summaries](https://img.shields.io/badge/summaries-in--browser-ff6b6b.svg)
 ![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)
 
 ![research-digest status](https://vitals.wwel.sh/badge/proxmox/research-digest/status.svg)
@@ -13,77 +13,107 @@
 
 # Research Digest
 
-A local-first arXiv feed with AI-written plain-language summaries, running entirely on your
-own hardware.
-
-Curate research interests, and Research Digest keeps a local corpus of matching papers, each
-with a plain-English summary, a layman explanation, topical tags, and semantically-related
-papers. Desktop grid for deep reading, mobile feed for quick scrolling, full-text filtering on
-both. No API keys, no cloud, no separate model server. Summaries run in-process on DistilBART;
-embeddings on DistilBERT — both CPU, both bundled in this one app.
+An installable, offline-first research digest. Fetching, scoring, and summarization all run
+**in your browser** — arXiv, Semantic Scholar, and OpenReview papers are summarized and tagged
+by tiny BERT/BART-family models running entirely on your own device. No API keys, no cloud, no
+account, nothing synced.
 
 ---
 
 ## Features
 
-- **AI summaries** — summary from DistilBART, layman explanation/difficulty/tags from local keyword heuristics. Runs entirely on-device; nothing leaves your network.
-- **Search & relate** — client-side keyword filter on every page; "related papers" precomputed from DistilBERT embeddings.
-- **Corpus-first** — SQLite is the source of truth. The site renders from the DB, so a failed arXiv fetch never wipes good output.
-- **Resilient pipeline** — 429 backoff, upsert-never-delete, and a render step that refuses to publish an empty digest.
-- **Desktop + mobile** — multi-column grid and a full-screen swipeable feed.
-- **Configurable** — JSON interests, keyword scoring, look-back window.
+- **Installable PWA** — add it to your home screen/desktop; works offline after the first visit.
+- **Client-side everything** — interests, saved papers, and the fetch/summarize/embed pipeline
+  all run in your browser via IndexedDB and [transformers.js](https://huggingface.co/docs/transformers.js).
+  Your data never leaves your device.
+- **Three sources** — arXiv, Semantic Scholar, and OpenReview, deduped against each other and
+  your existing corpus.
+- **Live search** — search all three sources on demand, not just what's already been fetched.
+- **Saves shape future fetches** — liking papers nudges what gets pulled in next time, via a
+  small deterministic keyword-feedback loop (no ML, no black box).
+- **Corpus-first** — everything you've fetched stays in IndexedDB; a failed/offline fetch never
+  loses what you already have.
 
 ---
 
 ## How it works
 
-SQLite holds the corpus. The pipeline is a chain of independent, idempotent stages — and only
-the first one touches the network:
+Almost everything runs client-side. The server is intentionally as small as it can possibly
+be — just enough to work around one hard constraint: browsers enforce CORS on every request,
+and none of arXiv, Semantic Scholar, or OpenReview send the header that would let a browser
+call them directly (confirmed by testing, not assumed).
 
-| Stage | Network? | Does |
+| Piece | Where it runs | Does |
 |-------|:---:|------|
-| `fetch.py`     | arXiv | Upsert new papers (original abstract). 429 backoff; never deletes. |
-| `summarize.py` | — | Fill missing summaries/layman/difficulty/tags via local DistilBART + heuristics. |
-| `embed.py`     | — | Fill missing vectors via local DistilBERT (mean-pooled hidden states). |
-| `relate.py`    | — | Precompute nearest-neighbour papers (cosine) for "related". |
-| `render.py`    | — | Build the static site from the DB. Atomic writes; refuses to publish empty. |
+| `relay.py` | Server (stdlib only) | Stateless CORS relay — forwards an allowlisted query to one of the three source APIs and adds the CORS header. No database, no auth, no state. |
+| `app/sources/*.js` | Browser | Normalizes each source's response into a common paper shape. |
+| `app/models.worker.js` | Browser (Web Worker) | Summarizes + embeds papers in-browser via `transformers.js`, so inference never blocks the UI. |
+| `app/feedback.js` | Browser | Turns saved papers into extra scoring keywords for your *next* fetch — recency-decayed, gated behind a minimum-saves threshold so a couple of early saves can't overfit it. |
+| `app/db.js` | Browser (IndexedDB) | Your corpus, interests, saves, and settings. Nothing here ever reaches the server. |
+| `sw.js` | Browser (Service Worker) | Caches the app shell for offline use. Live data (`/relay/*`) is always network-only. |
 
-`run.sh` chains them; a fetch failure is logged and the rest still run on the existing corpus.
-Everything after `fetch` runs offline, so a multi-day arXiv rate limit just means "no new
-papers" — the site stays fully live.
+The **server-side Python pipeline** (`fetch.py → summarize.py → embed.py → relate.py →
+export_seed.py`) still exists, unchanged in method, but its job has shrunk: it runs on a
+schedule (cron) purely to keep `seed-corpus.json` fresh, so a brand-new install isn't empty on
+first open. Once installed, the PWA fetches and summarizes for itself and never needs that file
+again.
 
 ---
 
-## Quick Start
+## Quick Start (developing/reviewing locally)
 
 ```bash
 git clone https://github.com/usr-wwelsh/research-digest.git
 cd research-digest
 python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 
-./run.sh            # fetch -> summarize -> embed -> relate -> render
+./run.sh            # fetch -> summarize -> embed -> relate -> export_seed
 # or, no network:
-./run.sh --offline  # rebuild the site from the existing corpus
+./run.sh --offline  # rebuild seed-corpus.json from the existing corpus
 ```
 
 The first `summarize`/`embed` run downloads ~650MB of model weights (cached under
-`.hf_cache/` after that — no repeat downloads).
+`.hf_cache/` after that). Serve the repo root with any static file server and open
+`index.html` — the landing page links to the app itself (`app/digest.html`).
 
-Open `index.html` (landing), `latest.html` (digest), `archive.html`, or `feed.html` (mobile).
+The client also needs the `transformers.js` runtime it ships with:
 
-**Migrating from v1?** Recover your old backlog from the archived HTML with zero arXiv calls:
+```bash
+cd app
+npm install
+npm run build:vendor          # rebuilds app/vendor/transformers.min.js
+cd .. && ./scripts/fetch_vendor_assets.sh   # one-time onnxruntime-web WASM download
+```
+
+**Run the test suites:**
+
+```bash
+./venv/bin/pip install -r requirements-dev.txt && ./venv/bin/python -m pytest
+cd app && npm test
+```
+
+**Migrating from the old static-site version?** Recover your old backlog from the archived
+HTML with zero arXiv calls:
 
 ```bash
 ./venv/bin/python migrate_from_html.py   # parses arxiv_archive/*.html into digest.db
-./run.sh --offline                       # summarize + embed + render the backlog
+./run.sh --offline                       # summarize + embed + re-export the backlog
 ```
-
-(The original abstracts aren't in old HTML, so salvaged papers are flagged
-`needs_abstract_backfill`; `./venv/bin/python fetch.py --backfill` refetches them in batches.)
 
 ---
 
 ## Configuration
+
+Two separate things are configured in two separate places, on purpose — they serve different
+audiences:
+
+- **`config.json`** — the *server-side seed pipeline's* interests (same shape as before: a
+  query + keyword list per interest). This only controls what goes into `seed-corpus.json`,
+  i.e. what a fresh install sees before it starts fetching for itself.
+- **In-app Settings** (`app/settings.html`) — *your* interests, saved on your device. Seeded
+  once from `config.json`'s 5 defaults on first run, then fully yours to edit — add/remove
+  interests, change keywords, pick which of the three sources each one uses. Nothing here is
+  sent to the server.
 
 ```json
 {
@@ -105,12 +135,6 @@ Open `index.html` (landing), `latest.html` (digest), `archive.html`, or `feed.ht
 }
 ```
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `papers_per_interest` | 25 | Papers kept per interest per fetch |
-| `recent_days` | 7 | Look-back window (0 = all time) |
-| `fetch_multiplier` | 3 | Over-fetch, then keyword-rank, then trim |
-
 arXiv query syntax: combine category codes with `OR`/`AND`, e.g. `cat:cs.LG OR cat:cs.AI`
 ([full taxonomy](https://arxiv.org/category_taxonomy)).
 
@@ -125,12 +149,15 @@ bash <(curl -sL https://raw.githubusercontent.com/usr-wwelsh/Research-Digest/mai
 ```
 
 This creates a Debian LXC, installs Caddy + cloudflared, sets up the venv, pre-downloads the
-model weights, configures the weekly cron (Monday 8am), and serves on `:8080`. After it
-finishes, edit `config.json` and run `sudo -u www-data /opt/research-digest/run.sh`.
+model weights, starts **two** services behind Caddy — the static file server and `relay.py`
+(bound to `127.0.0.1:8081`, reverse-proxied at `/relay/*`) — and configures the weekly seed
+cron (Monday 8am). After it finishes, edit `config.json` and run
+`sudo -u www-data /opt/research-digest/run.sh`.
 
-Idle footprint is ~50-80MB (Caddy + cloudflared, the Python process only runs during the
-weekly cron job). Budget headroom for that run: DistilBART + DistilBERT need roughly 1-2GB
-of RAM while the pipeline is executing.
+Idle footprint is small — Caddy + cloudflared + the always-on `relay.py` process (a few MB,
+stdlib only). The Python/torch pipeline only runs during the weekly cron job; budget headroom
+for that run same as before (DistilBART + DistilBERT need roughly 1-2GB of RAM while it's
+executing).
 
 ---
 
@@ -138,29 +165,46 @@ of RAM while the pipeline is executing.
 
 ```
 research-digest/
-├── config.json          # interests, settings, local_ai block
-├── db.py                # SQLite schema + data access (source of truth)
-├── fetch.py             # arXiv ingest (backoff, upsert, --backfill)
-├── summarize.py         # DistilBART summaries + heuristics
-├── embed.py             # DistilBERT embeddings
-├── relate.py            # nearest-neighbour "related papers"
-├── render.py             # static site builder (atomic, refuses empty)
-├── migrate_from_html.py # one-time v1 backlog salvage
-├── local_ai.py           # local model client (summarize + embed, lazy-loaded)
-├── templates/           # Jinja2 templates (autoescaped)
-├── run.sh               # pipeline runner (cron entrypoint)
-├── setup.sh             # LXC bootstrap
-├── create-lxc.sh        # Proxmox LXC creator
-├── Caddyfile             # static file server
-└── digest.db             # the corpus (gitignored)
+├── config.json           # seed-pipeline interests (see Configuration)
+├── db.py                 # SQLite schema + data access — unchanged, still the seed corpus's source of truth
+├── fetch.py               # arXiv ingest for the seed corpus (backoff, upsert, --backfill)
+├── summarize.py            # DistilBART summaries + heuristics, for the seed corpus
+├── embed.py                # DistilBERT embeddings, for the seed corpus
+├── relate.py                # nearest-neighbour "related papers", for the seed corpus
+├── export_seed.py            # writes seed-corpus.json (atomic, refuses empty)
+├── local_ai.py                # local model client used by the seed pipeline
+├── relay.py                    # stateless CORS relay (stdlib only) — the only always-on server piece
+├── migrate_from_html.py        # one-time v1 backlog salvage
+├── run.sh                      # seed pipeline runner (cron entrypoint)
+├── setup.sh / create-lxc.sh    # LXC bootstrap (installs Caddy + relay.py as systemd services)
+├── Caddyfile                   # static file server + /relay/* reverse proxy
+├── research-digest-*.service   # systemd units (Caddy, relay)
+├── scripts/fetch_vendor_assets.sh  # one-time onnxruntime-web WASM download
+├── manifest.json / sw.js        # PWA manifest + service worker
+├── icons/                        # app icons (flat mono book glyph)
+├── index.html                    # static landing page ("install this PWA")
+├── app/                           # the actual PWA — plain ES modules, no bundler
+│   ├── digest.html / feed.html / search.html / saved.html / settings.html
+│   ├── db.js                      # IndexedDB wrapper (papers/interests/saved/settings)
+│   ├── sources/                   # arXiv/Semantic Scholar/OpenReview adapters (via relay.py)
+│   ├── models.worker.js            # in-browser summarize/embed (transformers.js, off the UI thread)
+│   ├── feedback.js                 # save -> future-fetch keyword feedback loop
+│   ├── fetch-orchestrator.js        # wires sources + scoring + dedup + feedback + IndexedDB together
+│   └── vendor/transformers.min.js    # self-hosted, esbuild-bundled transformers.js
+└── digest.db                      # the seed corpus (gitignored)
 ```
 
 ---
 
 ## Requirements
 
-- Python 3.9+ · deps: `requests`, `jinja2`, `numpy`, `torch` (CPU), `transformers`
-- Internet only for the `fetch` stage and the one-time model download
+- **Server**: Python 3.9+ · deps: `requests`, `numpy`, `torch` (CPU), `transformers` — internet
+  only for the weekly seed-pipeline fetch and the one-time model download. `relay.py` itself
+  needs nothing beyond the stdlib.
+- **Client**: any evergreen browser (Service Workers, IndexedDB, Web Workers, WebAssembly).
+  Nothing to install — it's a website until you choose to install it.
+- **Dev-only**: Node.js, to rebuild `app/vendor/transformers.min.js` when the library updates
+  (`app/package.json`'s `build:vendor` script) and to run the client-side test suite.
 
 ---
 
@@ -172,5 +216,7 @@ MIT — see [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-- [arXiv](https://arxiv.org/) for the open research repository
-- Hugging Face `transformers`, and the DistilBART/DistilBERT model authors, for local inference
+- [arXiv](https://arxiv.org/), [Semantic Scholar](https://www.semanticscholar.org/), and
+  [OpenReview](https://openreview.net/) for the open research APIs
+- Hugging Face `transformers` / `transformers.js`, and the DistilBART/DistilBERT model authors,
+  for local inference — server-side and now in-browser
