@@ -2,10 +2,12 @@
 # Research Digest v2 — pipeline runner.
 #
 # Stages are independent; only fetch touches arXiv, and its failure is non-fatal
-# (a rate limit just means no new papers — the corpus and site stay intact).
-# render is the gate: it refuses to publish an empty corpus.
+# (a rate limit just means no new papers — the corpus and seed file stay intact).
+# export_seed is the gate: it refuses to overwrite seed-corpus.json with an
+# empty export. The PWA fetches for itself client-side after that; this
+# pipeline only needs to keep seed-corpus.json non-empty for a fresh install.
 #
-#   ./run.sh            full pipeline: fetch -> summarize -> embed -> relate -> render
+#   ./run.sh            full pipeline: fetch -> summarize -> embed -> relate -> export_seed
 #   ./run.sh --offline  skip fetch (rebuild from the existing corpus; no network)
 
 set -uo pipefail
@@ -40,10 +42,10 @@ run summarize.py || true   # local model stages skip gracefully if a model is un
 run embed.py || true
 run relate.py || true
 
-if run render.py; then
+if run export_seed.py; then
     log "=== pipeline complete ==="
 else
-    log "=== render refused (empty corpus?) — site left unchanged ==="
+    log "=== export_seed refused (empty corpus?) — seed-corpus.json left unchanged ==="
     exit 1
 fi
 

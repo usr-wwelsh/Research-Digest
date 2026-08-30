@@ -21,17 +21,17 @@ __pycache__/
 # Node
 node_modules/
 
-# ArXiv Downloads
+# Old pipeline output (render.py is retired; nothing generates these
+# anymore, kept only so a leftover local file from before this doesn't
+# get committed by accident)
 arxiv_archive/
 *.pdf
+/latest.html
+/archive.html
 
-# Generated Files (root-level only — app/*.html is hand-written source)
+# Generated Files
 seen_papers.json
 digest.db
-/latest.html
-/index.html
-/archive.html
-/feed.html
 /seed-corpus.json
 .hf_cache/
 vendor/ort/

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Research Digest</title>
+  <meta name="description" content="An installable, offline-first research digest — fetches and summarizes papers entirely on your own device. No API keys, no cloud, no account." />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0f0f0f" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg: #111113; --panel: #18181b; --border: #2b2b30;
+      --text: #e4e4e7; --muted: #8b8b92; --line: #3a3a40;
+    }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+      line-height: 1.7;
+    }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 4rem 1.5rem 3rem; }
+    .glyph { width: 56px; height: 56px; display: block; margin-bottom: 1.5rem; }
+    h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 0.3rem; color: var(--text); }
+    .tagline { color: var(--muted); font-size: 0.9rem; margin: 0 0 2.5rem; }
+    p { color: #c4c4ca; font-size: 0.95rem; margin: 0 0 1.5rem; }
+    .pitch { border-left: 2px solid var(--line); padding-left: 1.2rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 2rem 0 3rem; }
+    .btn { display: inline-block; padding: 0.6rem 1.1rem; border: 1px solid var(--line); border-radius: 4px;
+      color: var(--text); text-decoration: none; font-size: 0.85rem; background: var(--panel); }
+    .btn:hover { border-color: var(--muted); }
+    .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .btn.primary:hover { opacity: 0.85; }
+    .btn[hidden] { display: none; }
+    .facts { list-style: none; padding: 0; margin: 0 0 3rem; color: var(--muted); font-size: 0.85rem; }
+    .facts li { padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
+    .facts li:last-child { border-bottom: none; }
+    footer { color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--border); padding-top: 1.5rem; }
+    footer a { color: var(--muted); }
+    a { color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <svg class="glyph" viewBox="0 0 512 512" aria-hidden="true">
+      <path d="M256,168 C256,158 250,152 240,155 L128,136 C111,133 98,146 98,163
+               L98,362 C98,379 111,392 128,389 L240,370 C250,368 256,360 256,350 Z" fill="#d4d4dc" />
+      <path d="M256,168 C256,158 262,152 272,155 L384,136 C401,133 414,146 414,163
+               L414,362 C414,379 401,392 384,389 L272,370 C262,368 256,360 256,350 Z" fill="#e8e8ee" />
+      <rect x="251" y="152" width="10" height="204" rx="4" fill="#9a9aa4" />
+    </svg>
+
+    <h1>Research Digest</h1>
+    <p class="tagline">An offline-first companion for keeping up with research.</p>
+
+    <p class="pitch">
+      This is a progressive web app you can install to your devices. It fetches papers from
+      arXiv, Semantic Scholar, and OpenReview, then summarizes and tags them with tiny offline
+      BERT/BART models running entirely on your own device — no API keys, no cloud, no account.
+      Free forever.
+    </p>
+
+    <div class="actions">
+      <button id="install-btn" class="btn primary" hidden type="button">Install</button>
+      <a id="open-btn" class="btn" href="app/digest.html">Open the app</a>
+      <a class="btn" href="https://git.wwel.sh/research-digest" target="_blank" rel="noopener">Contribute / file issues</a>
+    </div>
+
+    <ul class="facts">
+      <li>Fetching, scoring, and summarization all run in your browser.</li>
+      <li>Your interests and saved papers stay on this device — no account, nothing synced.</li>
+      <li>Works offline after your first visit; a small relay only proxies the few source APIs that don't allow direct browser requests.</li>
+    </ul>
+
+    <footer>
+      MIT licensed · self-hosted · <a href="https://wwel.sh">wwel.sh</a>
+    </footer>
+  </div>
+
+  <script type="module" src="app/pwa.js"></script>
+  <script type="module">
+    const installBtn = document.getElementById("install-btn");
+    let deferredPrompt = null;
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredPrompt = event;
+      installBtn.hidden = false;
+    });
+
+    installBtn.addEventListener("click", async () => {
+      if (!deferredPrompt) return;
+      installBtn.hidden = true;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+    });
+
+    window.addEventListener("appinstalled", () => {
+      installBtn.hidden = true;
+    });
+  </script>
+</body>
+</html>
