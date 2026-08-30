@@ -3,6 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "build:vendor": "esbuild vendor-entry.js --bundle --format=esm --platform=browser --minify --outfile=vendor/transformers.min.js"
+  },
+  "devDependencies": {
+    "@huggingface/transformers": "4.2.0",
+    "esbuild": "^0.28.2"
   }
 }

@@ -33,6 +33,7 @@ index.html
 archive.html
 feed.html
 .hf_cache/
+vendor/ort/
 
 # Syncthing
 .stfolder/

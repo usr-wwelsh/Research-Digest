@@ -6,6 +6,8 @@
 		path /
 		path *.html
 		path /arxiv_archive/*
+		path /app/*
+		path /vendor/*
 	}
 	handle @allowed {
 		rewrite / /index.html
@@ -26,6 +28,7 @@
 	# Cache archived digests but not the main pages (they update weekly)
 	header /arxiv_archive/* Cache-Control "public, max-age=604800"
 	header /*.html Cache-Control "no-cache, must-revalidate"
+	header /vendor/* Cache-Control "public, max-age=2592000, immutable"
 
 	log {
 		output file /opt/research-digest/logs/caddy_access.log {
