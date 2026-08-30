@@ -16,6 +16,10 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.pytest_cache/
+
+# Node
+node_modules/
 
 # ArXiv Downloads
 arxiv_archive/

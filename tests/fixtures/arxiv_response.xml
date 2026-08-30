@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <entry>
+    <id>http://arxiv.org/abs/2508.01234v2</id>
+    <title>  Efficient   Edge   Inference   via   Quantization  </title>
+    <summary>
+      We present a technique for efficient inference on edge devices
+      using quantization and pruning.
+    </summary>
+    <published>2026-08-15T12:00:00Z</published>
+    <updated>2026-08-20T09:30:00Z</updated>
+    <arxiv:primary_category term="cs.LG" />
+    <category term="cs.LG" />
+    <category term="cs.CV" />
+    <author><name>Ada Researcher</name></author>
+    <author><name>Bo Scientist</name></author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2508.05678v1</id>
+    <title>A Theoretical Study of Convergence</title>
+    <summary>This paper proves a convergence theorem for a class of optimizers.</summary>
+    <published>2026-08-10T00:00:00Z</published>
+    <updated>2026-08-10T00:00:00Z</updated>
+    <arxiv:primary_category term="math.OC" />
+    <category term="math.OC" />
+    <author><name>Chi Mathematician</name></author>
+  </entry>
+</feed>
