@@ -53,7 +53,7 @@ function renderList(papers, visible) {
     (footer ? `<div class="list-footer">${footer}</div>` : "");
 }
 
-async function refreshView() {
+async function doRefreshView() {
   const filtered = filteredSorted();
   const visible = filtered.slice(0, Math.min(revealed, filtered.length));
   renderList(filtered, visible);
@@ -66,6 +66,31 @@ async function refreshView() {
     const visible2 = filtered2.slice(0, Math.min(revealed, filtered2.length));
     renderList(filtered2, visible2);
   }
+}
+
+// Single-flight: overlapping callers (filter keystrokes, a double-clicked
+// "show more") used to each kick off their own summarizePapers() run against
+// a stale paper list — same queued abstracts summarized twice, and their
+// progress counters (different totals) interleaving in the status line. A
+// call that arrives mid-run now just marks a rerun instead of starting a
+// second one, so only one summarization pass is ever in flight.
+let refreshInFlight = null;
+let refreshQueued = false;
+
+async function refreshView() {
+  if (refreshInFlight) {
+    refreshQueued = true;
+    return refreshInFlight;
+  }
+  refreshInFlight = (async () => {
+    do {
+      refreshQueued = false;
+      await doRefreshView();
+    } while (refreshQueued);
+  })().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
 }
 
 papersEl.addEventListener("click", async (event) => {
