@@ -1,6 +1,6 @@
 import { getAll, put, del } from "./db.js";
 import { navHtml, interestRowHtml, setStatus } from "./ui-common.js";
-import { runFullRefresh } from "./refresh.js";
+import { fetchNewPapers } from "./refresh.js";
 import { DEFAULT_INTERESTS } from "./default-interests.js";
 
 document.getElementById("nav").innerHTML = navHtml("settings.html");
@@ -75,10 +75,13 @@ resetBtn.addEventListener("click", async () => {
   render();
 });
 
+// Settings doesn't display papers, so there's nothing to lazily summarize
+// here — just pull new candidates; the digest/feed pages summarize
+// whatever's visible next time you open them.
 refreshBtn.addEventListener("click", async () => {
   refreshBtn.disabled = true;
   try {
-    await runFullRefresh(setStatus);
+    await fetchNewPapers(setStatus);
   } finally {
     refreshBtn.disabled = false;
   }

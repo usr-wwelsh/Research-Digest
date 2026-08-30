@@ -17,21 +17,38 @@ env.allowLocalModels = false;
 
 const SUMMARIZER_MODEL = "Xenova/distilbart-cnn-6-6";
 const EMBEDDING_MODEL = "Xenova/distilbert-base-uncased";
-const DTYPE = "q8"; // quantized — the standard tradeoff for in-browser inference
+
+// The summarizer is fp32 (full precision, no quantization), not the
+// smaller/faster q8 default — "q8" (transformers.js's own WASM default)
+// hit a real onnxruntime-web failure in the browser building this model's
+// merged decoder session: "Missing required scale: model.shared.weight_
+// merged_0_scale" out of onnxruntime-web's QDQ/MatMulNBits graph
+// optimizer. Reproduced under Node with @huggingface/transformers direct
+// (not the browser WASM backend, so not a perfect match, but the same
+// package/model/dtype): q8 loads fine there, so this looks like a
+// WASM-EP-specific bug in the pinned onnxruntime-web nightly build
+// (1.26.0-dev.20260416-b7804b056c) rather than a bad model file. fp32 has
+// no quantization nodes at all, so this whole error class is structurally
+// impossible — confirmed to load and generate correctly under Node.
+// The embedder (encoder-only, no merged-decoder graph, no "model.shared"
+// tied-embedding complexity) has no evidence of the same issue and stays
+// on q8 for its smaller/faster download.
+const SUMMARIZER_DTYPE = "fp32";
+const EMBEDDER_DTYPE = "q8";
 
 let summarizerPromise = null;
 let embedderPromise = null;
 
 function getSummarizer() {
   if (!summarizerPromise) {
-    summarizerPromise = pipeline("summarization", SUMMARIZER_MODEL, { dtype: DTYPE });
+    summarizerPromise = pipeline("summarization", SUMMARIZER_MODEL, { dtype: SUMMARIZER_DTYPE });
   }
   return summarizerPromise;
 }
 
 function getEmbedder() {
   if (!embedderPromise) {
-    embedderPromise = pipeline("feature-extraction", EMBEDDING_MODEL, { dtype: DTYPE });
+    embedderPromise = pipeline("feature-extraction", EMBEDDING_MODEL, { dtype: EMBEDDER_DTYPE });
   }
   return embedderPromise;
 }
