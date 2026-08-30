@@ -151,8 +151,12 @@ def summarize(title, abstract, category=None, interest=None):
         if len(sentences) <= SUMMARY_SENTENCE_COUNT:
             summary = text
         else:
+            # Sentences batched together, not with the (much longer) full
+            # text: padding pads every item in a batch to its longest
+            # member, so mixing doc + sentences would pad every short
+            # sentence out to the document's length and erase the win.
             doc_embedding = embed(text)
-            embeddings = [embed(s) for s in sentences]
+            embeddings = embed_batch(sentences)
             summary = " ".join(extractive.select_summary_sentences(
                 sentences, embeddings, doc_embedding, SUMMARY_SENTENCE_COUNT))
     return {
@@ -172,15 +176,25 @@ def _mean_pool(last_hidden_state, attention_mask):
 
 def embed(text):
     """Return a mean-pooled DistilBERT embedding for `text`, or None if unavailable."""
+    return embed_batch([text])[0]
+
+
+def embed_batch(texts):
+    """Return a mean-pooled DistilBERT embedding per text, in one forward pass.
+
+    One tokenize+forward call for the whole batch instead of one per text —
+    the fixed per-call overhead (tokenization, model dispatch) dominates for
+    short texts like abstract sentences, so batching is the main lever here.
+    """
     tokenizer, model = _load_embedder()
     if model is None:
-        return None
+        return [None] * len(texts)
     import torch
     with torch.no_grad():
-        inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512, padding=True)
+        inputs = tokenizer(texts, return_tensors="pt", truncation=True, max_length=512, padding=True)
         out = model(**inputs)
-        vec = _mean_pool(out.last_hidden_state, inputs["attention_mask"])[0]
-    return vec.tolist()
+        vecs = _mean_pool(out.last_hidden_state, inputs["attention_mask"])
+    return vecs.tolist()
 
 
 if __name__ == "__main__":

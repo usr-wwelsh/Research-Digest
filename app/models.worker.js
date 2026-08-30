@@ -14,7 +14,10 @@ env.backends.onnx.wasm.wasmPaths = {
   wasm: "/vendor/ort/ort-wasm-simd-threaded.asyncify.wasm",
 };
 env.allowLocalModels = false;
-env.backends.onnx.wasm.numThreads = 1;
+// COI is enabled (see commit a20c1c8) specifically so this can thread —
+// the self-hosted asyncify build above doesn't hit the Firefox hang that a
+// plain threaded build would, so it's safe to actually use the cores.
+env.backends.onnx.wasm.numThreads = Math.max(1, Math.min(self.navigator?.hardwareConcurrency || 1, 4));
 
 const EMBEDDING_MODEL = "Xenova/distilbert-base-uncased";
 const EMBEDDER_DTYPE = "q8";
@@ -41,25 +44,32 @@ function getEmbedder() {
   return embedderPromise;
 }
 
-// Mean-pooled, not normalized — matches local_ai.py's _mean_pool.
-async function embedText(text) {
+// Mean-pooled, not normalized — matches local_ai.py's _mean_pool. Batched:
+// one tokenize+forward pass for the whole array, not one per text — this is
+// the dominant cost, since each call pays fixed tokenization/WASM overhead
+// on top of the matmuls.
+async function embedBatch(texts) {
   const embedder = await getEmbedder();
-  const out = await embedder(text, { pooling: "mean", normalize: false });
-  return Array.from(out.data);
+  const out = await embedder(texts, { pooling: "mean", normalize: false });
+  return out.tolist();
 }
 
-// Centroid extractive summary (extractive.js). Sequential, not
-// Promise.all — the ONNX WASM session isn't reentrant.
+async function embedText(text) {
+  return (await embedBatch([text]))[0];
+}
+
+// Centroid extractive summary (extractive.js). Sentences are batched
+// together in one forward pass, but kept separate from the (much longer)
+// full-text embedding: the tokenizer pads every item in a batch to its
+// longest member, so mixing doc + sentences would pad each short sentence
+// out to the document's length and erase the win.
 async function extractiveSummary(text) {
   const sentences = splitSentences(text);
   const docEmbedding = await embedText(text);
   if (sentences.length <= SUMMARY_SENTENCE_COUNT) {
     return { summary: text.trim(), embedding: docEmbedding };
   }
-  const embeddings = [];
-  for (const sentence of sentences) {
-    embeddings.push(await embedText(sentence));
-  }
+  const embeddings = await embedBatch(sentences);
   const summary = selectSummarySentences(sentences, embeddings, docEmbedding, SUMMARY_SENTENCE_COUNT).join(" ");
   return { summary, embedding: docEmbedding };
 }
