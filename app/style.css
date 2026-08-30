@@ -14,7 +14,9 @@ a:hover { color: var(--accent); }
 .container { max-width: 1600px; margin: 0 auto; }
 .topbar { display: flex; justify-content: space-between; align-items: center;
   padding: 0.6rem 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
-.topbar .brand { font-weight: 900; font-size: 1.1rem; color: var(--text); }
+.topbar .brand { font-weight: 900; font-size: 1.1rem; color: var(--text);
+  display: inline-flex; align-items: center; gap: 0.45rem; }
+.brand-glyph { width: 22px; height: 22px; flex-shrink: 0; }
 .topbar nav { display: flex; align-items: center; gap: 1.1rem; }
 .topbar nav a { font-weight: 600; font-size: 0.9rem; }
 .topbar nav a.active { color: var(--accent); }

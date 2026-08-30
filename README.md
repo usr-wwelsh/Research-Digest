@@ -73,8 +73,7 @@ python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 ```
 
 The first `summarize`/`embed` run downloads ~650MB of model weights (cached under
-`.hf_cache/` after that). Serve the repo root with any static file server and open
-`index.html` — the landing page links to the app itself (`app/digest.html`).
+`.hf_cache/` after that).
 
 The client also needs the `transformers.js` runtime it ships with:
 
@@ -84,6 +83,24 @@ npm install
 npm run build:vendor          # rebuilds app/vendor/transformers.min.js
 cd .. && ./scripts/fetch_vendor_assets.sh   # one-time onnxruntime-web WASM download
 ```
+
+**Serving it locally:** a plain static file server (`python -m http.server`, etc.) is *not*
+enough — search and fetching go through `relay.py` at `/relay/*`, and only Caddy actually
+proxies that path (see [How it works](#how-it-works)). Everything else will load fine under a
+plain static server; only the Refresh/Search actions will fail with a 404. Run both pieces
+locally instead, in two terminals from the repo root:
+
+```bash
+# terminal 1
+RELAY_ALLOWED_ORIGIN=http://localhost:8080 ./venv/bin/python relay.py
+
+# terminal 2
+RESEARCH_DIGEST_ROOT="$(pwd)" caddy run --config Caddyfile --adapter caddyfile
+```
+
+Then open `http://localhost:8080` — the landing page links to the app itself
+(`app/digest.html`). `RESEARCH_DIGEST_ROOT` overrides the Caddyfile's production default of
+`/opt/research-digest`; the systemd services don't set it, so deployment is unaffected.
 
 **Run the test suites:**
 

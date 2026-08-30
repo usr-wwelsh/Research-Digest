@@ -97,13 +97,23 @@ const NAV_LINKS = [
   ["settings.html", "Settings"],
 ];
 
+// Same glyph as icons/icon.svg / index.html's landing-page mark — kept in
+// sync by hand since there are only these two places it appears.
+const BRAND_GLYPH_SVG = `<svg class="brand-glyph" viewBox="0 0 512 512" aria-hidden="true">
+        <path d="M256,168 C256,158 250,152 240,155 L128,136 C111,133 98,146 98,163
+                 L98,362 C98,379 111,392 128,389 L240,370 C250,368 256,360 256,350 Z" fill="#d4d4dc" />
+        <path d="M256,168 C256,158 262,152 272,155 L384,136 C401,133 414,146 414,163
+                 L414,362 C414,379 401,392 384,389 L272,370 C262,368 256,360 256,350 Z" fill="#e8e8ee" />
+        <rect x="251" y="152" width="10" height="204" rx="4" fill="#9a9aa4" />
+      </svg>`;
+
 export function navHtml(active) {
   const links = NAV_LINKS
     .map(([href, label]) => `<a href="${href}"${href === active ? ' class="active"' : ""}>${label}</a>`)
     .join("\n        ");
   return `
     <div class="topbar">
-      <a class="brand" href="../index.html">📚 Research Digest</a>
+      <a class="brand" href="../index.html">${BRAND_GLYPH_SVG} Research Digest</a>
       <nav>
         ${links}
         <button id="refresh-btn" class="refresh-btn" title="Fetch and summarize new papers">🔄</button>

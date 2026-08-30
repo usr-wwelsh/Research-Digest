@@ -1,13 +1,13 @@
 :8080 {
-	root * /opt/research-digest
+	root * {$RESEARCH_DIGEST_ROOT:/opt/research-digest}
 
 	# Only serve HTML files and the archive directory
 	@allowed {
 		path /
 		path *.html
 		path /arxiv_archive/*
-		path /app/**
-		path /vendor/**
+		path /app/*
+		path /vendor/*
 		path /manifest.json
 		path /sw.js
 		path /seed-corpus.json
@@ -32,14 +32,14 @@
 	# Cache archived digests but not the main pages (they update weekly)
 	header /arxiv_archive/* Cache-Control "public, max-age=604800"
 	header /*.html Cache-Control "no-cache, must-revalidate"
-	header /vendor/** Cache-Control "public, max-age=2592000, immutable"
+	header /vendor/* Cache-Control "public, max-age=2592000, immutable"
 	header /icons/* Cache-Control "public, max-age=2592000"
 	header /sw.js Cache-Control "no-cache"
 	header /manifest.json Cache-Control "no-cache, must-revalidate"
 	header /seed-corpus.json Cache-Control "no-cache, must-revalidate"
 
 	log {
-		output file /opt/research-digest/logs/caddy_access.log {
+		output file {$RESEARCH_DIGEST_ROOT:/opt/research-digest}/logs/caddy_access.log {
 			roll_size 10mb
 			roll_keep 3
 		}
