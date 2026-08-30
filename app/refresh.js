@@ -1,11 +1,5 @@
-// Fetching and summarizing are split on purpose: fetching new candidates is
-// cheap (a few HTTP calls), but summarizing/embedding is real CPU-bound
-// in-browser inference — doing it for 100+ papers up front on every
-// Refresh click is slow enough to feel broken. So the Refresh button only
-// calls fetchNewPapers(); summarizePapers() is called lazily by digest.js
-// for just the batch of papers it's actually about to show (see its
-// pagination), and again for whatever new batch becomes visible as the
-// user pages further.
+// Fetching and summarizing are split so Refresh stays cheap: summarizePapers()
+// is called lazily by digest.js for just the visible batch, not the whole corpus.
 import { getAll, putMany } from "./db.js";
 import { runFetchCycle } from "./fetch-orchestrator.js";
 import { computeRelated } from "./relate.js";
@@ -15,11 +9,19 @@ let worker = null;
 let msgId = 0;
 const pending = new Map();
 
+// The onStatus for whichever callWorker() call is in flight — lets an
+// unsolicited "progress" message (model loading) reach the caller too.
+let activeOnStatus = null;
+
 function getWorker() {
   if (!worker) {
     worker = new Worker(new URL("./models.worker.js", import.meta.url), { type: "module" });
     worker.onmessage = (event) => {
-      const { id, ok, result, error } = event.data;
+      const { id, ok, result, error, type, message } = event.data;
+      if (type === "progress") {
+        if (activeOnStatus) activeOnStatus(message);
+        return;
+      }
       const resolver = pending.get(id);
       if (!resolver) return;
       pending.delete(id);
@@ -30,9 +32,10 @@ function getWorker() {
   return worker;
 }
 
-function callWorker(type, payload) {
+function callWorker(type, payload, onStatus) {
   const id = ++msgId;
   const w = getWorker();
+  activeOnStatus = onStatus || null;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject });
     w.postMessage({ id, type, payload });
@@ -44,8 +47,7 @@ export async function getInterests() {
   return rows.length ? rows : DEFAULT_INTERESTS;
 }
 
-// Pulls new candidates for enabled interests (or just the ones passed in —
-// used for a single interest's "Fetch more" button). No summarization.
+// No summarization — just new candidates for enabled interests.
 export async function fetchNewPapers(onStatus = () => {}, interests = null) {
   onStatus("Checking interests…");
   const list = interests || (await getInterests()).filter((i) => i.enabled !== false);
@@ -55,12 +57,8 @@ export async function fetchNewPapers(onStatus = () => {}, interests = null) {
   return added;
 }
 
-// Set once the worker reports what looks like a systemic model-load
-// failure (a broken/incompatible ONNX session for this browser+build, not
-// a per-paper problem), so the rest of this session stops paying the cost
-// of re-attempting it for every remaining paper and just falls back to
-// showing the abstract instead — mirrors local_ai.py's _summarizer_failed
-// flag on the server side.
+// Set once a systemic (not per-paper) model-load failure is seen, so the
+// rest of the session skips straight to showing abstracts.
 let summarizerBroken = false;
 
 function looksSystemic(err) {
@@ -68,8 +66,8 @@ function looksSystemic(err) {
   return /create a session|session creation|backend not found/i.test(msg);
 }
 
-// Summarizes/embeds exactly the given papers — call this with only the
-// papers a page is about to render, not the whole corpus.
+// Summarizes/embeds exactly the given papers, persisting each as it finishes
+// so a later call sees it as already done.
 export async function summarizePapers(papers, interests, onStatus = () => {}) {
   const toProcess = papers.filter((p) => !p.summary || !p.embedding);
   const total = toProcess.length;
@@ -84,13 +82,14 @@ export async function summarizePapers(papers, interests, onStatus = () => {}) {
       if (!paper.summary && !summarizerBroken) {
         const result = await callWorker("summarize", {
           title: paper.title, abstract: paper.abstract, category: paper.primary_category, keywords,
-        });
+        }, onStatus);
         Object.assign(paper, result);
       }
       if (!paper.embedding) {
-        const { embedding } = await callWorker("embed", { text: paper.abstract || paper.title });
+        const { embedding } = await callWorker("embed", { text: paper.abstract || paper.title }, onStatus);
         paper.embedding = embedding;
       }
+      await putMany("papers", [paper]);
     } catch (err) {
       if (!summarizerBroken && looksSystemic(err)) {
         summarizerBroken = true;
@@ -113,9 +112,8 @@ export async function summarizePapers(papers, interests, onStatus = () => {}) {
   return { processed: done, total };
 }
 
-// Fetch everything, then summarize everything — the old all-in-one
-// behavior, kept for callers that genuinely want it (a periodic background
-// sync, not a foreground page view where it'd block on 100+ papers).
+// Fetch everything, then summarize everything — for callers that want the
+// old all-in-one behavior (a background sync, not a foreground page view).
 export async function runFullRefresh(onStatus = () => {}) {
   await fetchNewPapers(onStatus);
   const [papers, interests] = await Promise.all([getAll("papers"), getInterests()]);
