@@ -1,19 +1,22 @@
 """Summarize stage — fill papers missing a summary. Offline, idempotent, no network.
 
 Reads the best available text (original abstract, or the salvaged text placeholder),
-runs it through the local DistilBART summarizer, and stores summary/layman/difficulty +
-topical tags. Papers left unprocessed (model unavailable) are simply left for the next run.
+extracts the sentence(s) closest to the abstract's own DistilBERT embedding (see
+extractive.py — no generation), and stores summary/layman/difficulty + topical tags.
+Papers left unprocessed (model unavailable) are simply left for the next run.
 """
 import sys
 
 import db
 import local_ai
 
+SUMMARY_MODEL_LABEL = f"extractive/{local_ai.CFG['embedding_model']}"
+
 
 def main():
     conn = db.connect()
     rows = db.papers_missing_summary(conn)
-    print(f"Summarize: {len(rows)} papers need a summary ({local_ai.CFG['summarizer_model']})")
+    print(f"Summarize: {len(rows)} papers need a summary ({SUMMARY_MODEL_LABEL})")
     if rows and not local_ai.summarizer_available():
         print("  summarizer unavailable — skipping this stage (papers stay queued).")
         return
@@ -29,7 +32,7 @@ def main():
             summary=res["summary"],
             layman=res["layman"],
             difficulty=res["difficulty"],
-            summary_model=local_ai.CFG["summarizer_model"],
+            summary_model=SUMMARY_MODEL_LABEL,
             summary_at=db.now_iso(),
         )
         if res["tags"]:

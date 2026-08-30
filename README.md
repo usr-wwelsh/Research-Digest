@@ -146,7 +146,6 @@ audiences:
     "fetch_multiplier": 3
   },
   "local_ai": {
-    "summarizer_model": "sshleifer/distilbart-cnn-12-6",
     "embedding_model": "distilbert-base-uncased"
   }
 }
@@ -173,8 +172,8 @@ cron (Monday 8am). After it finishes, edit `config.json` and run
 
 Idle footprint is small — Caddy + cloudflared + the always-on `relay.py` process (a few MB,
 stdlib only). The Python/torch pipeline only runs during the weekly cron job; budget headroom
-for that run same as before (DistilBART + DistilBERT need roughly 1-2GB of RAM while it's
-executing).
+for that run same as before (DistilBERT — the only model, summarization is extractive and
+needs no separate model — needs well under 1GB of RAM while it's executing).
 
 ---
 
@@ -185,7 +184,8 @@ research-digest/
 ├── config.json           # seed-pipeline interests (see Configuration)
 ├── db.py                 # SQLite schema + data access — unchanged, still the seed corpus's source of truth
 ├── fetch.py               # arXiv ingest for the seed corpus (backoff, upsert, --backfill)
-├── summarize.py            # DistilBART summaries + heuristics, for the seed corpus
+├── summarize.py            # extractive summaries + heuristics, for the seed corpus
+├── extractive.py               # centroid-based extractive summarization (shared algorithm)
 ├── embed.py                # DistilBERT embeddings, for the seed corpus
 ├── relate.py                # nearest-neighbour "related papers", for the seed corpus
 ├── export_seed.py            # writes seed-corpus.json (atomic, refuses empty)
@@ -235,5 +235,5 @@ MIT — see [LICENSE](LICENSE).
 
 - [arXiv](https://arxiv.org/), [Semantic Scholar](https://www.semanticscholar.org/), and
   [OpenReview](https://openreview.net/) for the open research APIs
-- Hugging Face `transformers` / `transformers.js`, and the DistilBART/DistilBERT model authors,
+- Hugging Face `transformers` / `transformers.js`, and the DistilBERT model authors,
   for local inference — server-side and now in-browser

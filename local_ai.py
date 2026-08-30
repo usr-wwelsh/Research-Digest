@@ -1,22 +1,26 @@
 """local_ai — in-process summarization and embeddings. No server, no network.
 
-Summaries come from DistilBART (sshleifer/distilbart-cnn-12-6, CPU). It only produces
-a summary string — no structured output — so layman explanation and difficulty are
-keyword heuristics (cheap, deterministic, carried over from v1) and tags are keywords
-from the paper's matched interest that actually appear in its text. Embeddings are
-mean-pooled DistilBERT hidden states, used only for coarse "related papers" similarity.
+Summaries are extractive (see extractive.py): the sentence(s) of the abstract closest
+to its own mean-pooled DistilBERT embedding, picked by cosine similarity — no
+generation, so the only model needed is the same DistilBERT used for "related papers"
+embeddings. Layman explanation and difficulty are keyword heuristics (cheap,
+deterministic, carried over from v1) and tags are keywords from the paper's matched
+interest that actually appear in its text.
 
-Models are loaded lazily and cached at module scope, so a stage that finds nothing
+The model is loaded lazily and cached at module scope, so a stage that finds nothing
 to do never pays the load cost. A model that fails to load (no internet on first
 run, no disk space, etc.) is remembered as unavailable rather than retried per paper.
 """
 import os
 import json
 
+import extractive
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+SUMMARY_SENTENCE_COUNT = 2
+
 DEFAULTS = {
-    "summarizer_model": "sshleifer/distilbart-cnn-12-6",
     "embedding_model": "distilbert-base-uncased",
 }
 
@@ -38,29 +42,9 @@ def load_config():
 
 CFG = load_config()
 
-_summarizer_tokenizer = None
-_summarizer_model = None
-_summarizer_failed = False
 _embed_tokenizer = None
 _embed_model = None
 _embedder_failed = False
-
-
-def _load_summarizer():
-    """Load tokenizer + seq2seq model directly (not the `pipeline` task shortcut,
-    whose task-name registry has churned across transformers major versions)."""
-    global _summarizer_tokenizer, _summarizer_model, _summarizer_failed
-    if _summarizer_model is not None or _summarizer_failed:
-        return _summarizer_model
-    try:
-        from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-        _summarizer_tokenizer = AutoTokenizer.from_pretrained(CFG["summarizer_model"])
-        _summarizer_model = AutoModelForSeq2SeqLM.from_pretrained(CFG["summarizer_model"])
-        _summarizer_model.eval()
-    except Exception as e:
-        print(f"  local_ai: summarizer unavailable ({e})")
-        _summarizer_failed = True
-    return _summarizer_model
 
 
 def _load_embedder():
@@ -79,8 +63,8 @@ def _load_embedder():
 
 
 def summarizer_available():
-    return _load_summarizer() is not None
-
+    """Summarization is extractive, so it needs only the embedder."""
+    return embedder_available()
 
 
 def embedder_available():
@@ -88,8 +72,7 @@ def embedder_available():
 
 
 def warm():
-    """Force both models to load (and download weights on first run)."""
-    _load_summarizer()
+    """Force the model to load (and download weights on first run)."""
     _load_embedder()
 
 
@@ -157,21 +140,21 @@ def _tags(title, abstract, interest):
 # --- summarize / embed ---
 
 def summarize(title, abstract, category=None, interest=None):
-    """Return {summary, layman, difficulty, tags} or None if the summarizer is unavailable."""
-    model = _load_summarizer()
-    if model is None:
+    """Return {summary, layman, difficulty, tags} or None if the embedder is unavailable."""
+    if not embedder_available():
         return None
     text = abstract or title
     if len(text.split()) < 15:
         summary = text
     else:
-        import torch
-        max_len = min(CFG.get("summary_max_length", 142), 142)
-        inputs = _summarizer_tokenizer(text, return_tensors="pt", truncation=True, max_length=1024)
-        with torch.no_grad():
-            out = model.generate(**inputs, max_length=max_len, min_length=30,
-                                  num_beams=4, early_stopping=True)
-        summary = _summarizer_tokenizer.decode(out[0], skip_special_tokens=True)
+        sentences = extractive.split_sentences(text)
+        if len(sentences) <= SUMMARY_SENTENCE_COUNT:
+            summary = text
+        else:
+            doc_embedding = embed(text)
+            embeddings = [embed(s) for s in sentences]
+            summary = " ".join(extractive.select_summary_sentences(
+                sentences, embeddings, doc_embedding, SUMMARY_SENTENCE_COUNT))
     return {
         "summary": summary.strip(),
         "layman": _layman(abstract or title),
@@ -201,5 +184,5 @@ def embed(text):
 
 
 if __name__ == "__main__":
-    print("local_ai:", CFG["summarizer_model"], "/", CFG["embedding_model"],
-          "| summarizer:", summarizer_available(), "| embedder:", embedder_available())
+    print("local_ai:", CFG["embedding_model"],
+          "| summarizer (extractive):", summarizer_available(), "| embedder:", embedder_available())

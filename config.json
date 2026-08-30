@@ -82,7 +82,6 @@
     "user_agent": "ResearchDigestBot/2.0 (github.com/usr-wwelsh)"
   },
   "local_ai": {
-    "summarizer_model": "sshleifer/distilbart-cnn-12-6",
     "embedding_model": "distilbert-base-uncased"
   }
 }
