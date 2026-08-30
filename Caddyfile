@@ -1,6 +1,18 @@
 :8080 {
 	root * {$RESEARCH_DIGEST_ROOT:/opt/research-digest}
 
+	# Cross-origin isolation, required for onnxruntime-web's threaded WASM
+	# backend (models.worker.js) to use SharedArrayBuffer. Without these,
+	# onnxruntime-web silently falls back to numThreads=1 no matter which
+	# WASM binary is loaded — see fetch_vendor_assets.sh, which already
+	# fetches the threaded build. No cross-origin subresources are loaded
+	# (relay/* is same-origin reverse-proxied), so this is safe to set
+	# globally.
+	header {
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Embedder-Policy "require-corp"
+	}
+
 	# Only serve HTML files and the archive directory
 	@allowed {
 		path /
