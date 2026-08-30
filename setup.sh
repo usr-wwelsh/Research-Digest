@@ -103,7 +103,14 @@ systemctl daemon-reload
 systemctl enable research-digest-caddy.service
 systemctl start research-digest-caddy.service
 
-# --- 7. Cloudflare tunnel ---
+# --- 7. Relay service (stateless CORS relay for the client-side PWA) ---
+log "Setting up relay service..."
+cp "$INSTALL_DIR/research-digest-relay.service" /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable research-digest-relay.service
+systemctl start research-digest-relay.service
+
+# --- 8. Cloudflare tunnel ---
 warn "Cloudflare tunnel setup requires interactive login."
 warn "After this script finishes, run:"
 echo ""
@@ -129,7 +136,7 @@ echo "    systemctl enable cloudflared"
 echo "    systemctl start cloudflared"
 echo ""
 
-# --- 8. Cron job ---
+# --- 9. Cron job ---
 log "Setting up weekly cron job ($CRON_SCHEDULE)..."
 # Run run.sh directly as www-data. No systemd-run wrapper: a non-root user can't
 # create a transient scope from cron (it needs interactive polkit auth), which
@@ -140,6 +147,7 @@ chmod 644 /etc/cron.d/research-digest
 log "=== Setup complete! ==="
 echo ""
 echo "  Caddy is serving on :8080"
+echo "  Relay is serving on 127.0.0.1:8081 (proxied via Caddy at /relay/*)"
 echo "  Weekly digest runs: Monday 8:00 AM"
 echo "  Logs: $INSTALL_DIR/logs/"
 echo ""

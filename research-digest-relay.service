@@ -1,0 +1,23 @@
+[Unit]
+Description=Research Digest - stateless CORS relay
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+Environment=RELAY_ALLOWED_ORIGIN=https://research.wwel.sh
+Environment=RELAY_PORT=8081
+ExecStart=/opt/research-digest/venv/bin/python /opt/research-digest/relay.py
+Restart=on-failure
+RestartSec=5
+
+# Hardening — no DB, no filesystem writes, no secrets: this process only
+# ever needs outbound HTTPS and a loopback listening socket.
+NoNewPrivileges=yes
+ProtectSystem=strict
+PrivateTmp=yes
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target
