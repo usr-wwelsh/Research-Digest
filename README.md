@@ -201,7 +201,7 @@ research-digest/
 ├── icons/                        # app icons (flat mono book glyph)
 ├── index.html                    # static landing page ("install this PWA")
 ├── app/                           # the actual PWA — plain ES modules, no bundler
-│   ├── digest.html / feed.html / search.html / saved.html / settings.html
+│   ├── digest.html / search.html / saved.html / settings.html
 │   ├── db.js                      # IndexedDB wrapper (papers/interests/saved/settings)
 │   ├── sources/                   # arXiv/Semantic Scholar/OpenReview adapters (via relay.py)
 │   ├── models.worker.js            # in-browser summarize/embed (transformers.js, off the UI thread)

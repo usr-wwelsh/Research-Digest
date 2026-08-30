@@ -10,14 +10,11 @@ export function escapeHtml(s) {
   }[c]));
 }
 
-const DIFFICULTY_LABEL = { "Applied": "🟢 Applied", "Advanced": "🟡 Advanced", "Theory-Heavy": "🔴 Theory-Heavy" };
-
 export function paperCardHtml(paper, isSaved) {
-  const diffClass = (paper.difficulty || "").toLowerCase().replace(/[^a-z]+/g, "-");
   const diffBadge = paper.difficulty
-    ? `<span class="difficulty-badge d-${diffClass}">${escapeHtml(DIFFICULTY_LABEL[paper.difficulty] || paper.difficulty)}</span>`
+    ? `<span class="difficulty-badge">${escapeHtml(paper.difficulty)}</span>`
     : "";
-  const laymanBox = paper.layman ? `<div class="layman-box">💡 ${escapeHtml(paper.layman)}</div>` : "";
+  const laymanBox = paper.layman ? `<div class="layman-box">${escapeHtml(paper.layman)}</div>` : "";
   const tagsHtml = (paper.tags && paper.tags.length)
     ? `<div class="tags">${paper.tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</div>`
     : "";
@@ -35,32 +32,6 @@ export function paperCardHtml(paper, isSaved) {
         <span class="category-tag">${escapeHtml(paper.primary_category || paper.source || "")}</span>
         <span class="date">${escapeHtml(paper.published || "")}</span>
       </div>
-      <div class="links">
-        <a href="${escapeHtml(paper.abs_url || "#")}" target="_blank" rel="noopener">Abstract ↗</a>
-        ${pdfLink}
-        <button class="save-btn" data-save-id="${escapeHtml(paper.arxiv_id)}" aria-pressed="${isSaved ? "true" : "false"}">${isSaved ? "★ Saved" : "☆ Save"}</button>
-      </div>
-    </div>`;
-}
-
-// Full-viewport swipe-feed card — a distinct layout from paperCardHtml's
-// grid card, ported from the old templates/feed.j2.
-export function feedCardHtml(paper, isSaved) {
-  const diffLabel = paper.difficulty ? escapeHtml(DIFFICULTY_LABEL[paper.difficulty] || paper.difficulty) : "";
-  const laymanBox = paper.layman ? `<div class="feed-layman">💡 ${escapeHtml(paper.layman)}</div>` : "";
-  const tagsHtml = (paper.tags && paper.tags.length)
-    ? `<div class="tags">${paper.tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</div>`
-    : "";
-  const pdfLink = paper.pdf_url ? `<a href="${escapeHtml(paper.pdf_url)}" target="_blank" rel="noopener">PDF ↗</a>` : "";
-
-  return `
-    <div class="feed-card">
-      <span class="badge">${escapeHtml(paper.interest || paper.source || "")}</span>
-      ${diffLabel ? `<div class="feed-diff">${diffLabel}</div>` : ""}
-      <h1 class="feed-title">${escapeHtml(paper.title)}</h1>
-      ${laymanBox}
-      <div class="feed-summary">${escapeHtml(paper.summary || paper.abstract || "")}</div>
-      ${tagsHtml}
       <div class="links">
         <a href="${escapeHtml(paper.abs_url || "#")}" target="_blank" rel="noopener">Abstract ↗</a>
         ${pdfLink}
@@ -91,7 +62,6 @@ export function interestRowHtml(interest, index) {
 
 const NAV_LINKS = [
   ["digest.html", "Digest"],
-  ["feed.html", "Feed"],
   ["search.html", "Search"],
   ["saved.html", "Saved"],
   ["settings.html", "Settings"],
@@ -116,7 +86,7 @@ export function navHtml(active) {
       <a class="brand" href="../index.html">${BRAND_GLYPH_SVG} Research Digest</a>
       <nav>
         ${links}
-        <button id="refresh-btn" class="refresh-btn" title="Fetch and summarize new papers">🔄</button>
+        <button id="refresh-btn" class="refresh-btn" type="button" title="Fetch and summarize new papers">Refresh</button>
       </nav>
     </div>
     <div id="status-line" class="status-line" hidden></div>`;
@@ -185,7 +155,7 @@ export function wireSaveButtons(container, source = "digest", onToggled = null) 
 // Like wireSaveButtons, but for results that may not exist in the local
 // corpus yet (live search results, not yet fetched by any interest) —
 // saving one also upserts it into the papers store first, so it shows up
-// in the digest/feed and can feed the save→future-fetch feedback loop and
+// in the digest and can feed the save→future-fetch feedback loop and
 // "related papers", the same as anything the pipeline fetched itself.
 export function wireSearchSaveButtons(container, getResultById, source = "search") {
   container.addEventListener("click", async (event) => {

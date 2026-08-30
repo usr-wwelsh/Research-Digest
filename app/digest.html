@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Digest • Research Digest</title>
+  <title>Research Digest</title>
   <link rel="manifest" href="../manifest.json" />
   <meta name="theme-color" content="#0f0f0f" />
   <link rel="stylesheet" href="style.css" />
@@ -11,12 +11,9 @@
 <body>
   <div class="container">
     <div id="nav"></div>
-    <h1>Your Digest</h1>
-    <input id="filter" class="searchbar" type="search" placeholder="Filter your digest…" autocomplete="off" />
-    <div id="groups"></div>
-    <div id="empty" class="empty" hidden>
-      No papers yet. Hit 🔄 to fetch your first batch, or wait for it to load from the seed corpus.
-    </div>
+    <input id="filter" class="searchbar" type="search" placeholder="Filter…" autocomplete="off" />
+    <div id="papers" class="papers-grid"></div>
+    <div id="empty" class="empty" hidden>No papers yet — hit Refresh to fetch your first batch.</div>
   </div>
   <script type="module" src="pwa.js"></script>
   <script type="module" src="digest.js"></script>

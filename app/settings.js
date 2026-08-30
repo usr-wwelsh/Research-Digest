@@ -76,8 +76,8 @@ resetBtn.addEventListener("click", async () => {
 });
 
 // Settings doesn't display papers, so there's nothing to lazily summarize
-// here — just pull new candidates; the digest/feed pages summarize
-// whatever's visible next time you open them.
+// here — just pull new candidates; the digest page summarizes whatever's
+// visible next time you open it.
 refreshBtn.addEventListener("click", async () => {
   refreshBtn.disabled = true;
   try {

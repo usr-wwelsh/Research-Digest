@@ -1,11 +1,15 @@
+// Single flat, chronological paper list — no per-interest grouping/banners.
+// Reveals PAGE_SIZE papers at a time (and summarizes only that increment,
+// not the whole corpus); once the locally-fetched pool is exhausted, the
+// same "load more" affordance runs a full fetch cycle to pull a fresh batch
+// before revealing further.
 import { getAll } from "./db.js";
-import { navHtml, paperCardHtml, escapeHtml, wireSaveButtons, ensureSeedImported, getSavedIdSet, setStatus } from "./ui-common.js";
+import { navHtml, paperCardHtml, wireSaveButtons, ensureSeedImported, getSavedIdSet, setStatus } from "./ui-common.js";
 import { fetchNewPapers, summarizePapers, getInterests } from "./refresh.js";
-import { DEFAULT_INTERESTS } from "./default-interests.js";
 
 document.getElementById("nav").innerHTML = navHtml("digest.html");
 
-const groupsEl = document.getElementById("groups");
+const papersEl = document.getElementById("papers");
 const emptyEl = document.getElementById("empty");
 const filterEl = document.getElementById("filter");
 const refreshBtn = document.getElementById("refresh-btn");
@@ -15,120 +19,92 @@ const PAGE_SIZE = 5;
 let allPapers = [];
 let savedIds = new Set();
 let interests = [];
-let order = DEFAULT_INTERESTS.map((i) => i.name);
-let revealed = new Map(); // interest name -> how many of its papers are currently shown
+let revealed = PAGE_SIZE;
+let fetchingMore = false;
 
-function groupedFiltered() {
+function filteredSorted() {
   const q = filterEl.value.toLowerCase().trim();
-  const grouped = new Map();
-  for (const p of allPapers) {
-    const text = `${p.title} ${p.summary || p.abstract || ""} ${(p.tags || []).join(" ")}`.toLowerCase();
-    if (q && !text.includes(q)) continue;
-    const key = p.interest || "Other";
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key).push(p);
-  }
-  for (const arr of grouped.values()) arr.sort((a, b) => (b.published || "").localeCompare(a.published || ""));
-  return grouped;
+  return allPapers
+    .slice()
+    .sort((a, b) => (b.published || "").localeCompare(a.published || ""))
+    .filter((p) => {
+      if (!q) return true;
+      const text = `${p.title} ${p.summary || p.abstract || ""} ${(p.tags || []).join(" ")}`.toLowerCase();
+      return text.includes(q);
+    });
 }
 
-function orderedGroupNames(grouped) {
-  return [...order.filter((n) => grouped.has(n)), ...Array.from(grouped.keys()).filter((n) => !order.includes(n))];
-}
-
-function renderGroups(grouped, names) {
+function renderList(papers, visible) {
   emptyEl.hidden = allPapers.length !== 0;
-  groupsEl.innerHTML = names
-    .map((name) => {
-      const papers = grouped.get(name);
-      const shown = Math.min(revealed.get(name) || PAGE_SIZE, papers.length);
-      const visible = papers.slice(0, shown);
-      const hasMoreLocally = papers.length > shown;
-      const canFetchMore = interests.some((i) => i.name === name);
-      const footer = hasMoreLocally
-        ? `<button class="btn load-more-btn" data-interest="${escapeHtml(name)}" type="button">Show ${Math.min(PAGE_SIZE, papers.length - shown)} more (${papers.length - shown} already fetched)</button>`
-        : (canFetchMore
-          ? `<button class="btn fetch-more-btn" data-interest="${escapeHtml(name)}" type="button">Fetch more papers</button>`
-          : "");
-      return `
-        <div class="interest-section">
-          <div class="interest-header"><h2 class="interest-title">${escapeHtml(name)}</h2></div>
-          <div class="papers-grid">${visible.map((p) => paperCardHtml(p, savedIds.has(p.arxiv_id))).join("")}</div>
-          <div class="links">${footer}</div>
-        </div>`;
-    })
-    .join("");
-}
+  const hasMoreLocal = papers.length > visible.length;
+  const canFetchMore = !hasMoreLocal && !filterEl.value.trim() && papers.length > 0;
 
-function visiblePapers(grouped, names) {
-  const out = [];
-  for (const name of names) {
-    const papers = grouped.get(name);
-    const shown = Math.min(revealed.get(name) || PAGE_SIZE, papers.length);
-    out.push(...papers.slice(0, shown));
+  let footer = "";
+  if (hasMoreLocal) {
+    footer = `<button class="btn load-more-btn" type="button">Show ${Math.min(PAGE_SIZE, papers.length - visible.length)} more</button>`;
+  } else if (canFetchMore) {
+    footer = fetchingMore
+      ? `<button class="btn load-more-btn" type="button" disabled>Fetching more…</button>`
+      : `<button class="btn load-more-btn" type="button">Fetch more papers</button>`;
   }
-  return out;
+
+  papersEl.innerHTML =
+    visible.map((p) => paperCardHtml(p, savedIds.has(p.arxiv_id))).join("") +
+    (footer ? `<div class="list-footer">${footer}</div>` : "");
 }
 
 async function refreshView() {
-  const grouped = groupedFiltered();
-  const names = orderedGroupNames(grouped);
-  renderGroups(grouped, names);
+  const filtered = filteredSorted();
+  const visible = filtered.slice(0, Math.min(revealed, filtered.length));
+  renderList(filtered, visible);
 
-  const toSummarize = visiblePapers(grouped, names).filter((p) => !p.summary || !p.embedding);
+  const toSummarize = visible.filter((p) => !p.summary || !p.embedding);
   if (toSummarize.length) {
     await summarizePapers(toSummarize, interests, setStatus);
     allPapers = await getAll("papers");
-    // Re-render with the now-filled-in summaries; deliberately not calling
-    // refreshView() again here — everything visible is summarized by now,
-    // so there's nothing left to trigger a further pass.
-    const grouped2 = groupedFiltered();
-    const names2 = orderedGroupNames(grouped2);
-    renderGroups(grouped2, names2);
+    const filtered2 = filteredSorted();
+    const visible2 = filtered2.slice(0, Math.min(revealed, filtered2.length));
+    renderList(filtered2, visible2);
   }
 }
 
-groupsEl.addEventListener("click", async (event) => {
-  const loadBtn = event.target.closest(".load-more-btn");
-  const fetchBtn = event.target.closest(".fetch-more-btn");
+papersEl.addEventListener("click", async (event) => {
+  const btn = event.target.closest(".load-more-btn");
+  if (!btn || btn.disabled) return;
 
-  if (loadBtn) {
-    const name = loadBtn.dataset.interest;
-    revealed.set(name, (revealed.get(name) || PAGE_SIZE) + PAGE_SIZE);
+  const filtered = filteredSorted();
+  if (revealed < filtered.length) {
+    revealed += PAGE_SIZE;
     await refreshView();
     return;
   }
 
-  if (fetchBtn) {
-    const name = fetchBtn.dataset.interest;
-    const interestCfg = interests.find((i) => i.name === name);
-    if (!interestCfg) return;
-    fetchBtn.disabled = true;
-    fetchBtn.textContent = "Fetching…";
-    try {
-      await fetchNewPapers(setStatus, [interestCfg]);
-      allPapers = await getAll("papers");
-      revealed.set(name, (revealed.get(name) || PAGE_SIZE) + PAGE_SIZE);
-      await refreshView();
-    } catch (err) {
-      console.error("digest: fetch more failed", err);
-      setStatus("Fetch failed — check your connection.");
-    } finally {
-      fetchBtn.disabled = false;
-    }
+  fetchingMore = true;
+  renderList(filtered, filtered.slice(0, revealed));
+  try {
+    await fetchNewPapers(setStatus);
+    allPapers = await getAll("papers");
+    revealed += PAGE_SIZE;
+  } catch (err) {
+    console.error("digest: batch fetch failed", err);
+    setStatus("Fetch failed — check your connection.");
+  } finally {
+    fetchingMore = false;
+    await refreshView();
   }
 });
 
 async function init() {
   await ensureSeedImported();
   interests = await getInterests();
-  if (interests.length) order = interests.map((i) => i.name);
-
   [allPapers, savedIds] = await Promise.all([getAll("papers"), getSavedIdSet()]);
   await refreshView();
 
-  wireSaveButtons(groupsEl, "digest");
-  filterEl.addEventListener("input", () => refreshView());
+  wireSaveButtons(papersEl, "digest");
+  filterEl.addEventListener("input", () => {
+    revealed = PAGE_SIZE;
+    refreshView();
+  });
 
   refreshBtn.addEventListener("click", async () => {
     refreshBtn.disabled = true;

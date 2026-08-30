@@ -2,10 +2,10 @@
 // cheap (a few HTTP calls), but summarizing/embedding is real CPU-bound
 // in-browser inference — doing it for 100+ papers up front on every
 // Refresh click is slow enough to feel broken. So the Refresh button only
-// calls fetchNewPapers(); summarizePapers() is called lazily by each page
-// for just the batch of papers it's actually about to show (see digest.js/
-// feed.js's pagination), and again for whatever new batch becomes visible
-// as the user pages/scrolls further.
+// calls fetchNewPapers(); summarizePapers() is called lazily by digest.js
+// for just the batch of papers it's actually about to show (see its
+// pagination), and again for whatever new batch becomes visible as the
+// user pages further.
 import { getAll, putMany } from "./db.js";
 import { runFetchCycle } from "./fetch-orchestrator.js";
 import { computeRelated } from "./relate.js";

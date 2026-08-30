@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { escapeHtml, paperCardHtml, feedCardHtml, navHtml, interestRowHtml } from "../ui-common.js";
+import { escapeHtml, paperCardHtml, navHtml, interestRowHtml } from "../ui-common.js";
 
 test("escapeHtml escapes all five special characters", () => {
   assert.equal(escapeHtml(`<a href="x">'&'</a>`), "&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;");
@@ -44,13 +44,6 @@ test("paperCardHtml omits the PDF link when pdf_url is missing", () => {
   const withoutPdf = paperCardHtml({ arxiv_id: "a", title: "T", pdf_url: null }, false);
   assert.ok(withPdf.includes("PDF"));
   assert.ok(!withoutPdf.includes("PDF"));
-});
-
-test("feedCardHtml escapes the title and reflects saved state", () => {
-  const html = feedCardHtml({ arxiv_id: "a", title: "<b>x</b>", interest: "My Interest" }, true);
-  assert.ok(!html.includes("<b>x</b>"));
-  assert.match(html, /aria-pressed="true"/);
-  assert.ok(html.includes(">My Interest<"));
 });
 
 test("interestRowHtml checks only the interest's own enabled sources", () => {
