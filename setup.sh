@@ -9,8 +9,9 @@
 #   2. Installs Caddy web server
 #   3. Installs cloudflared
 #   4. Clones the repo and sets up the Python venv
-#   5. Configures systemd services (Caddy + cloudflared)
-#   6. Sets up a weekly cron job (Monday 8am)
+#   5. Fetches the onnxruntime-web WASM runtime for the in-browser summarizer
+#   6. Configures systemd services (Caddy + relay)
+#   7. Sets up a weekly cron job (Monday 8am)
 
 set -euo pipefail
 
@@ -93,24 +94,28 @@ export HF_HOME="$INSTALL_DIR/.hf_cache"
 mkdir -p "$HF_HOME"
 "$INSTALL_DIR/venv/bin/python" -c "import local_ai; local_ai.warm()"
 
-# --- 5. Set permissions ---
+# --- 5. onnxruntime-web WASM runtime (threaded backend for models.worker.js) ---
+log "Fetching onnxruntime-web WASM runtime..."
+bash "$INSTALL_DIR/scripts/fetch_vendor_assets.sh"
+
+# --- 6. Set permissions ---
 chown -R www-data:www-data "$INSTALL_DIR"
 
-# --- 6. Caddy service ---
+# --- 7. Caddy service ---
 log "Setting up Caddy service..."
 cp "$INSTALL_DIR/research-digest-caddy.service" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable research-digest-caddy.service
 systemctl start research-digest-caddy.service
 
-# --- 7. Relay service (stateless CORS relay for the client-side PWA) ---
+# --- 8. Relay service (stateless CORS relay for the client-side PWA) ---
 log "Setting up relay service..."
 cp "$INSTALL_DIR/research-digest-relay.service" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable research-digest-relay.service
 systemctl start research-digest-relay.service
 
-# --- 8. Cloudflare tunnel ---
+# --- 9. Cloudflare tunnel ---
 warn "Cloudflare tunnel setup requires interactive login."
 warn "After this script finishes, run:"
 echo ""
@@ -136,7 +141,7 @@ echo "    systemctl enable cloudflared"
 echo "    systemctl start cloudflared"
 echo ""
 
-# --- 9. Cron job ---
+# --- 10. Cron job ---
 log "Setting up weekly cron job ($CRON_SCHEDULE)..."
 # Run run.sh directly as www-data. No systemd-run wrapper: a non-root user can't
 # create a transient scope from cron (it needs interactive polkit auth), which
