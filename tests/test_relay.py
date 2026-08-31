@@ -131,3 +131,87 @@ def test_response_never_forwards_upstream_to_client_as_cacheable(server, monkeyp
     monkeypatch.setattr(relay, "fetch_upstream", lambda url: (b"{}", 200, "application/json"))
     _, headers, _ = http_get(server, "/relay/openreview?term=x")
     assert headers.get("Cache-Control") == "no-store"
+
+
+# --- optional dev-mode static file serving (RELAY_STATIC_ROOT) ---
+
+def _start_server():
+    httpd = relay.ThreadingHTTPServer(("127.0.0.1", 0), relay.RelayHandler)
+    port = httpd.server_address[1]
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    return httpd, thread, port
+
+
+@pytest.fixture
+def static_server(tmp_path, monkeypatch):
+    (tmp_path / "index.html").write_text("<html>home</html>")
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "digest.html").write_text("<html>digest</html>")
+    (tmp_path / "manifest.json").write_text("{}")
+    (tmp_path / "secret.txt").write_text("nope")
+    monkeypatch.setattr(relay, "STATIC_ROOT", str(tmp_path))
+    httpd, thread, port = _start_server()
+    try:
+        yield port
+    finally:
+        httpd.shutdown()
+        thread.join()
+
+
+def test_static_disabled_by_default(server):
+    # STATIC_ROOT unset (the `server` fixture doesn't touch it) — unchanged 404 behavior.
+    assert relay.STATIC_ROOT is None
+    status, _, _ = http_get(server, "/")
+    assert status == 404
+
+
+def test_static_root_serves_index_at_slash(static_server):
+    status, _, body = http_get(static_server, "/")
+    assert status == 200
+    assert b"home" in body
+
+
+def test_static_root_serves_nested_html(static_server):
+    status, _, body = http_get(static_server, "/app/digest.html")
+    assert status == 200
+    assert b"digest" in body
+
+
+def test_static_root_sets_coop_coep_headers_for_threaded_wasm(static_server):
+    _, headers, _ = http_get(static_server, "/")
+    assert headers["Cross-Origin-Opener-Policy"] == "same-origin"
+    assert headers["Cross-Origin-Embedder-Policy"] == "require-corp"
+
+
+def test_static_root_rejects_disallowed_extension(static_server):
+    status, _, _ = http_get(static_server, "/secret.txt")
+    assert status == 404
+
+
+def test_static_root_rejects_missing_file(static_server):
+    status, _, _ = http_get(static_server, "/app/nope.html")
+    assert status == 404
+
+
+def test_static_root_rejects_path_traversal_outside_root(tmp_path, monkeypatch):
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "index.html").write_text("home")
+    (tmp_path / "outside.html").write_text("TOPSECRET")
+    monkeypatch.setattr(relay, "STATIC_ROOT", str(root))
+    httpd, thread, port = _start_server()
+    try:
+        status, _, body = http_get(port, "/../outside.html")
+        assert status == 404
+        assert b"TOPSECRET" not in body
+    finally:
+        httpd.shutdown()
+        thread.join()
+
+
+def test_relay_route_still_works_when_static_root_is_set(static_server, monkeypatch):
+    monkeypatch.setattr(relay, "fetch_upstream", lambda url: (b'{"ok":true}', 200, "application/json"))
+    status, _, body = http_get(static_server, "/relay/semanticscholar?query=edge")
+    assert status == 200
+    assert body == b'{"ok":true}'

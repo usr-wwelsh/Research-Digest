@@ -85,22 +85,17 @@ cd .. && ./scripts/fetch_vendor_assets.sh   # one-time onnxruntime-web WASM down
 ```
 
 **Serving it locally:** a plain static file server (`python -m http.server`, etc.) is *not*
-enough — search and fetching go through `relay.py` at `/relay/*`, and only Caddy actually
-proxies that path (see [How it works](#how-it-works)). Everything else will load fine under a
-plain static server; only the Refresh/Search actions will fail with a 404. Run both pieces
-locally instead, in two terminals from the repo root:
+enough — search and fetching go through `relay.py` at `/relay/*`. `relay.py` can serve the
+app's static files itself in dev mode (`RELAY_STATIC_ROOT`), so one command is enough:
 
 ```bash
-# terminal 1
-RELAY_ALLOWED_ORIGIN=http://localhost:8080 ./venv/bin/python relay.py
-
-# terminal 2
-RESEARCH_DIGEST_ROOT="$(pwd)" caddy run --config Caddyfile --adapter caddyfile
+RELAY_PORT=8080 RELAY_STATIC_ROOT="$(pwd)" ./venv/bin/python relay.py
 ```
 
 Then open `http://localhost:8080` — the landing page links to the app itself
-(`app/digest.html`). `RESEARCH_DIGEST_ROOT` overrides the Caddyfile's production default of
-`/opt/research-digest`; the systemd services don't set it, so deployment is unaffected.
+(`app/digest.html`). `RELAY_STATIC_ROOT` is dev-only and unset in production — there, Caddy
+still serves the static files and reverse-proxies `/relay/*` to `relay.py` (see
+[How it works](#how-it-works) and [Self-hosted deployment](#self-hosted-deployment-proxmox-lxc)).
 
 **Run the test suites:**
 

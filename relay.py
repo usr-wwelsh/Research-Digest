@@ -10,7 +10,9 @@ saved papers, scoring, summarization) lives client-side; this is only here
 because CORS makes it unavoidable.
 """
 import json
+import mimetypes
 import os
+import pathlib
 import sys
 import threading
 import time
@@ -25,6 +27,14 @@ USER_AGENT = "ResearchDigestRelay/1.0 (github.com/usr-wwelsh)"
 PORT = int(os.environ.get("RELAY_PORT", "8081"))
 UPSTREAM_TIMEOUT = 15
 MAX_STRING_PARAM_LEN = 500
+
+# Dev-only: when set, this same process also serves the app's static files,
+# so local dev needs one command instead of relay.py + a separate Caddy
+# instance. Unset in production — Caddy still serves & terminates TLS there
+# (see Caddyfile / create-lxc.sh). Mirrors the Caddyfile's path allowlist.
+STATIC_ROOT = os.environ.get("RELAY_STATIC_ROOT") or None
+_STATIC_EXACT_PATHS = {"/manifest.json", "/sw.js", "/seed-corpus.json"}
+_STATIC_PREFIXES = ("/arxiv_archive/", "/app/", "/vendor/", "/icons/")
 
 
 @dataclass(frozen=True)
@@ -157,7 +167,13 @@ class RelayHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlsplit(self.path)
         parts = parsed.path.strip("/").split("/")
-        if len(parts) != 2 or parts[0] != "relay" or parts[1] not in SOURCES:
+        if parts[0] != "relay":
+            if STATIC_ROOT:
+                self._serve_static(parsed.path)
+            else:
+                self._send_json(404, {"error": "not found"})
+            return
+        if len(parts) != 2 or parts[1] not in SOURCES:
             self._send_json(404, {"error": "not found"})
             return
         source = parts[1]
@@ -185,6 +201,46 @@ class RelayHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _serve_static(self, url_path):
+        """Dev-only static file serving, gated behind STATIC_ROOT (unset in
+        prod). Mirrors the Caddyfile allowlist: only *.html, the app/vendor/
+        icons/archive trees, and the PWA's top-level JSON files are served —
+        everything else is 404, never a directory listing or raw filesystem
+        walk. Path is resolved and re-checked against the root to block
+        traversal regardless of the allowlist above.
+        """
+        if url_path == "/":
+            url_path = "/index.html"
+        allowed = (
+            url_path.endswith(".html")
+            or url_path in _STATIC_EXACT_PATHS
+            or url_path.startswith(_STATIC_PREFIXES)
+        )
+        if not allowed:
+            self._send_json(404, {"error": "not found"})
+            return
+
+        root = pathlib.Path(STATIC_ROOT).resolve()
+        target = (root / url_path.lstrip("/")).resolve()
+        if target != root and root not in target.parents:
+            self._send_json(404, {"error": "not found"})
+            return
+        if not target.is_file():
+            self._send_json(404, {"error": "not found"})
+            return
+
+        body = target.read_bytes()
+        content_type, _ = mimetypes.guess_type(str(target))
+        self.send_response(200)
+        self.send_header("Content-Type", content_type or "application/octet-stream")
+        self.send_header("Content-Length", str(len(body)))
+        # Required for onnxruntime-web's threaded WASM backend (SharedArrayBuffer)
+        # — see Caddyfile, which sets these in production.
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
+        self.end_headers()
+        self.wfile.write(body)
+
     def _send_cors_headers(self):
         # Scoped to the real origin (least privilege), not "*".
         self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
@@ -206,7 +262,8 @@ class RelayHandler(BaseHTTPRequestHandler):
 def run(port=None):
     port = PORT if port is None else port
     httpd = ThreadingHTTPServer(("127.0.0.1", port), RelayHandler)
-    print(f"relay listening on 127.0.0.1:{port} (allowed origin: {ALLOWED_ORIGIN})")
+    static_note = f", serving static files from {STATIC_ROOT}" if STATIC_ROOT else ""
+    print(f"relay listening on 127.0.0.1:{port} (allowed origin: {ALLOWED_ORIGIN}){static_note}")
     httpd.serve_forever()
 
 
