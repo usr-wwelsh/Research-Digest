@@ -13,6 +13,9 @@ export function normalizeNote(note) {
   const content = note.content || {};
   let authors = fieldValue(content.authors) || [];
   if (!Array.isArray(authors)) authors = [];
+  // Per-invitation schemas sometimes wrap each entry too (not just the
+  // outer field), e.g. [{value: "Jane Doe"}, ...] instead of ["Jane Doe"].
+  authors = authors.map(fieldValue).filter((a) => typeof a === "string");
   const createdMs = note.cdate || note.pdate || null;
   const published = createdMs ? new Date(createdMs).toISOString().slice(0, 10) : null;
   return {

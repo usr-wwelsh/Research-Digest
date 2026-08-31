@@ -8,7 +8,8 @@ function normalizeTitle(t) {
 }
 
 function firstAuthor(authors) {
-  return ((authors && authors[0]) || "").toLowerCase();
+  const a = authors && authors[0];
+  return typeof a === "string" ? a.toLowerCase() : "";
 }
 
 export function findDuplicate(candidate, existingPapers) {

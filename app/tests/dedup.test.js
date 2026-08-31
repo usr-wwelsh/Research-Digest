@@ -37,3 +37,12 @@ test("title match requires the first author to also match", () => {
   const candidate = { dedup_arxiv_id: null, doi: null, title: "Efficient Edge Inference", authors: ["Someone Else"] };
   assert.equal(findDuplicate(candidate, existing), null);
 });
+
+test("a non-string first author (malformed source data) does not throw", () => {
+  const candidate = {
+    dedup_arxiv_id: null, doi: null,
+    title: "Some New Paper", authors: [{ value: "Ada Researcher" }],
+  };
+  assert.doesNotThrow(() => findDuplicate(candidate, existing));
+  assert.equal(findDuplicate(candidate, existing), null);
+});

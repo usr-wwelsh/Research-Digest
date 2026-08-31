@@ -138,6 +138,14 @@ test("openreview normalizeNote tolerates missing content entirely", () => {
   assert.deepEqual(p.authors, []);
 });
 
+test("openreview normalizeNote unwraps per-entry {value}-wrapped authors too", () => {
+  const p = normalizeNote({
+    id: "xyz789",
+    content: { title: "T", authors: { value: [{ value: "Ada Researcher" }, "Zed Zed"] } },
+  });
+  assert.deepEqual(p.authors, ["Ada Researcher", "Zed Zed"]);
+});
+
 test("openreview parseResponse maps the notes array, empty when absent", () => {
   assert.equal(parseOpenReviewResponse({}).length, 0);
   assert.equal(parseOpenReviewResponse({ notes: [{ id: "a" }] }).length, 1);
