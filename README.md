@@ -161,7 +161,7 @@ bash <(curl -sL https://raw.githubusercontent.com/usr-wwelsh/Research-Digest/mai
 
 This creates a Debian LXC, installs Caddy + cloudflared, sets up the venv, pre-downloads the
 model weights, starts **two** services behind Caddy — the static file server and `relay.py`
-(bound to `127.0.0.1:8081`, reverse-proxied at `/relay/*`) — and configures the weekly seed
+(bound to `127.0.0.1:8082`, reverse-proxied at `/relay/*`) — and configures the weekly seed
 cron (Monday 8am). After it finishes, edit `config.json` and run
 `sudo -u www-data /opt/research-digest/run.sh`.
 

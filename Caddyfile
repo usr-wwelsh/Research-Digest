@@ -33,7 +33,7 @@
 	# Stateless CORS relay for the client-side PWA (no DB, no auth — see
 	# relay.py). Must come before the catch-all below.
 	handle /relay/* {
-		reverse_proxy 127.0.0.1:8081
+		reverse_proxy 127.0.0.1:8082
 	}
 
 	# Block everything else

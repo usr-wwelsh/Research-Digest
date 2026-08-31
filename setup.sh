@@ -152,7 +152,7 @@ chmod 644 /etc/cron.d/research-digest
 log "=== Setup complete! ==="
 echo ""
 echo "  Caddy is serving on :8080"
-echo "  Relay is serving on 127.0.0.1:8081 (proxied via Caddy at /relay/*)"
+echo "  Relay is serving on 127.0.0.1:8082 (proxied via Caddy at /relay/*)"
 echo "  Weekly digest runs: Monday 8:00 AM"
 echo "  Logs: $INSTALL_DIR/logs/"
 echo ""
