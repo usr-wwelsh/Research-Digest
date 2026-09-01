@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Library • Research Digest</title>
+  <link rel="manifest" href="../manifest.json" />
+  <meta name="theme-color" content="#0f0f0f" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container container-wide">
+    <div id="nav"></div>
+    <h1>Library</h1>
+    <p class="summary">Everything already on this device — browse and re-read offline. Nothing here fetches or summarizes until you ask it to.</p>
+
+    <input id="q" class="searchbar" type="search" placeholder="Filter by title, summary, tag…" autocomplete="off" />
+
+    <div class="filter-bar">
+      <select id="filter-category"><option value="">All categories</option></select>
+      <select id="filter-source"><option value="">All sources</option></select>
+      <select id="filter-interest"><option value="">All interests</option></select>
+      <label class="check-label"><input type="checkbox" id="filter-has-summary" /> Has summary</label>
+    </div>
+
+    <div class="batch-bar">
+      <label class="check-label"><input type="checkbox" id="select-all" /> Select all shown</label>
+      <span id="select-count" class="muted"></span>
+      <button id="summarize-btn" class="btn" type="button" disabled>Summarize selected</button>
+    </div>
+
+    <div class="papers-grid library-grid" id="results"></div>
+    <div id="empty" class="empty" hidden>Nothing in your library yet — visit Digest or Search to fetch some papers.</div>
+    <div id="none-match" class="empty" hidden>No papers match these filters.</div>
+  </div>
+  <script type="module" src="pwa.js"></script>
+  <script type="module" src="library.js"></script>
+</body>
+</html>

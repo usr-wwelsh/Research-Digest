@@ -14,6 +14,7 @@ body {
 a { color: var(--text); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 2px; }
 a:hover { text-decoration-color: var(--text); }
 .container { max-width: 720px; margin: 0 auto; }
+.container-wide { max-width: 1100px; }
 
 .topbar { display: flex; justify-content: space-between; align-items: center;
   padding: 1.1rem 0; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
@@ -72,6 +73,26 @@ p.summary { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5rem; }
 .empty { padding: 3rem 1rem; text-align: center; color: var(--muted); font-size: 0.9rem; }
 
 .list-footer { display: flex; justify-content: center; margin-top: 0.25rem; }
+
+/* library.html — multi-column on wider screens, single column on mobile */
+.library-grid { display: flex; flex-direction: column; gap: 1.25rem; }
+@media (min-width: 640px) {
+  .library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); align-items: start; gap: 1.25rem; }
+}
+.library-card { position: relative; }
+.library-card .paper { height: 100%; }
+.select-check { position: absolute; top: 0.9rem; right: 1rem; z-index: 1; }
+.select-check input { width: 1.05rem; height: 1.05rem; cursor: pointer; }
+
+.filter-bar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
+.filter-bar select { padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--text); font-size: 0.82rem; font-family: inherit; }
+.check-label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--muted); }
+.check-label input { width: 1rem; height: 1rem; cursor: pointer; }
+
+.batch-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+  padding: 0.6rem 0.9rem; border: 1px solid var(--border); border-radius: 4px; background: var(--panel); }
+.muted { color: var(--muted); font-size: 0.8rem; }
 
 /* Generic bordered button, reused for load-more/settings actions */
 .btn { background: var(--panel); border: 1px solid var(--line); color: var(--text);

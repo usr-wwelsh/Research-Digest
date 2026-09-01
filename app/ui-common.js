@@ -64,6 +64,7 @@ const NAV_LINKS = [
   ["digest.html", "Digest"],
   ["search.html", "Search"],
   ["saved.html", "Saved"],
+  ["library.html", "Library"],
   ["settings.html", "Settings"],
 ];
 

@@ -2,7 +2,7 @@
 // / (including /app/*). Precaches the shell for offline reading; /relay/*
 // (live search/fetch data) is always network-only, never cached — see
 // each fetch handler below for the reasoning.
-const CACHE_VERSION = "shell-v3";
+const CACHE_VERSION = "shell-v6";
 
 const PRECACHE_URLS = [
   "/",
@@ -14,6 +14,7 @@ const PRECACHE_URLS = [
   "/app/digest.html",
   "/app/search.html",
   "/app/saved.html",
+  "/app/library.html",
   "/app/settings.html",
   "/app/style.css",
   "/app/pwa.js",
@@ -30,6 +31,7 @@ const PRECACHE_URLS = [
   "/app/digest.js",
   "/app/search.js",
   "/app/saved.js",
+  "/app/library.js",
   "/app/settings.js",
   "/app/models.worker.js",
   "/app/sources/arxiv.js",
