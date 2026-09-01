@@ -5,7 +5,7 @@
 // before revealing further.
 import { getAll } from "./db.js";
 import { navHtml, paperCardHtml, wireSaveButtons, ensureSeedImported, getSavedIdSet, setStatus } from "./ui-common.js";
-import { fetchNewPapers, summarizePapers, getInterests } from "./refresh.js";
+import { fetchNewPapers, summarizePapers, getInterests, onRemoteSummaryStatus } from "./refresh.js";
 
 document.getElementById("nav").innerHTML = navHtml("digest.html");
 
@@ -120,6 +120,7 @@ papersEl.addEventListener("click", async (event) => {
 });
 
 async function init() {
+  onRemoteSummaryStatus(setStatus);
   await ensureSeedImported();
   interests = await getInterests();
   [allPapers, savedIds] = await Promise.all([getAll("papers"), getSavedIdSet()]);

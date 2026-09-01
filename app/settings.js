@@ -1,6 +1,6 @@
 import { getAll, put, del } from "./db.js";
 import { navHtml, interestRowHtml, setStatus } from "./ui-common.js";
-import { fetchNewPapers } from "./refresh.js";
+import { fetchNewPapers, onRemoteSummaryStatus } from "./refresh.js";
 import { DEFAULT_INTERESTS } from "./default-interests.js";
 
 document.getElementById("nav").innerHTML = navHtml("settings.html");
@@ -88,6 +88,7 @@ refreshBtn.addEventListener("click", async () => {
 });
 
 async function init() {
+  onRemoteSummaryStatus(setStatus);
   interests = await getAll("interests");
   if (!interests.length) {
     for (const it of DEFAULT_INTERESTS) await put("interests", it);

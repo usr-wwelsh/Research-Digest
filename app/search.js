@@ -4,7 +4,7 @@ import * as openreview from "./sources/openreview.js";
 import { getAll } from "./db.js";
 import { findDuplicate } from "./dedup.js";
 import { navHtml, paperCardHtml, wireSearchSaveButtons, getSavedIdSet, setStatus } from "./ui-common.js";
-import { fetchNewPapers } from "./refresh.js";
+import { fetchNewPapers, onRemoteSummaryStatus } from "./refresh.js";
 
 document.getElementById("nav").innerHTML = navHtml("search.html");
 
@@ -57,6 +57,7 @@ inputEl.addEventListener("input", () => {
 });
 
 async function init() {
+  onRemoteSummaryStatus(setStatus);
   [existingPapers, savedIds] = await Promise.all([getAll("papers"), getSavedIdSet()]);
   wireSearchSaveButtons(resultsEl, (id) => currentResults.get(id), "search");
 

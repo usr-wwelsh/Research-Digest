@@ -1,6 +1,6 @@
 import { getAll } from "./db.js";
 import { navHtml, paperCardHtml, wireSaveButtons, setStatus } from "./ui-common.js";
-import { fetchNewPapers } from "./refresh.js";
+import { fetchNewPapers, onRemoteSummaryStatus } from "./refresh.js";
 
 document.getElementById("nav").innerHTML = navHtml("saved.html");
 
@@ -33,4 +33,5 @@ refreshBtn.addEventListener("click", async () => {
   }
 });
 
+onRemoteSummaryStatus(setStatus);
 load();
