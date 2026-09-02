@@ -60,6 +60,9 @@ p.summary { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5rem; }
 .summary { color: #c4c4ca; margin-bottom: 0.75rem; font-size: 0.9rem; line-height: 1.65; }
 .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
 .tag { border: 1px solid var(--line); color: var(--muted); padding: 0.15rem 0.55rem; border-radius: 3px; font-size: 0.72rem; }
+.related { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.75rem; }
+.related-label { color: var(--muted); margin-right: 0.3rem; }
+.related a { font-size: 0.8rem; }
 .paper-footer { display: flex; justify-content: space-between; align-items: center;
   padding-top: 0.65rem; border-top: 1px solid var(--border); margin-top: 0.25rem; font-size: 0.78rem; color: var(--muted); }
 .category-tag { color: var(--muted); }

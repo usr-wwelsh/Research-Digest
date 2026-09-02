@@ -48,8 +48,9 @@ function renderList(papers, visible) {
       : `<button class="btn load-more-btn" type="button">Fetch more papers</button>`;
   }
 
+  const byId = new Map(allPapers.map((p) => [p.arxiv_id, p]));
   papersEl.innerHTML =
-    visible.map((p) => paperCardHtml(p, savedIds.has(p.arxiv_id))).join("") +
+    visible.map((p) => paperCardHtml(p, savedIds.has(p.arxiv_id), byId)).join("") +
     (footer ? `<div class="list-footer">${footer}</div>` : "");
 }
 

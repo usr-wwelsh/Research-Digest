@@ -63,13 +63,13 @@ function filteredSorted() {
     .sort((a, b) => (b.published || "").localeCompare(a.published || ""));
 }
 
-function libraryCardHtml(paper, isSaved) {
+function libraryCardHtml(paper, isSaved, byId) {
   return `
     <div class="library-card">
       <label class="select-check" title="Select for batch summarize">
         <input type="checkbox" class="lib-select" data-select-id="${escapeHtml(paper.arxiv_id)}" ${selected.has(paper.arxiv_id) ? "checked" : ""} />
       </label>
-      ${paperCardHtml(paper, isSaved)}
+      ${paperCardHtml(paper, isSaved, byId)}
     </div>`;
 }
 
@@ -84,7 +84,8 @@ function render() {
   emptyEl.hidden = allPapers.length !== 0;
   const visible = filteredSorted();
   noneMatchEl.hidden = !(allPapers.length !== 0 && visible.length === 0);
-  resultsEl.innerHTML = visible.map((p) => libraryCardHtml(p, savedIds.has(p.arxiv_id))).join("");
+  const byId = new Map(allPapers.map((p) => [p.arxiv_id, p]));
+  resultsEl.innerHTML = visible.map((p) => libraryCardHtml(p, savedIds.has(p.arxiv_id), byId)).join("");
   updateBatchBar(visible);
 }
 

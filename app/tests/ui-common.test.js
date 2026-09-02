@@ -46,6 +46,29 @@ test("paperCardHtml omits the PDF link when pdf_url is missing", () => {
   assert.ok(!withoutPdf.includes("PDF"));
 });
 
+test("paperCardHtml omits related papers when byId is not given", () => {
+  const html = paperCardHtml({ arxiv_id: "a", title: "T", related: ["b"] }, false);
+  assert.ok(!html.includes("related-label"));
+});
+
+test("paperCardHtml omits related papers when none resolve in byId", () => {
+  const html = paperCardHtml({ arxiv_id: "a", title: "T", related: ["missing"] }, false, new Map());
+  assert.ok(!html.includes("related-label"));
+});
+
+test("paperCardHtml lists resolvable related papers as links", () => {
+  const byId = new Map([
+    ["b", { arxiv_id: "b", title: "Paper B", abs_url: "https://arxiv.org/abs/b" }],
+    ["c", { arxiv_id: "c", title: "Paper C", abs_url: "https://arxiv.org/abs/c" }],
+  ]);
+  const html = paperCardHtml({ arxiv_id: "a", title: "T", related: ["b", "c", "missing"] }, false, byId);
+  assert.ok(html.includes("related-label"));
+  assert.ok(html.includes('href="https://arxiv.org/abs/b"'));
+  assert.ok(html.includes(">Paper B<"));
+  assert.ok(html.includes(">Paper C<"));
+  assert.ok(!html.includes("missing"));
+});
+
 test("interestRowHtml checks only the interest's own enabled sources", () => {
   const html = interestRowHtml({ name: "X", keywords: ["a"], sources: ["arxiv"] }, 0);
   const arxivMatch = html.match(/data-source="arxiv"[^/]*\/>/)[0];

@@ -10,7 +10,21 @@ export function escapeHtml(s) {
   }[c]));
 }
 
-export function paperCardHtml(paper, isSaved) {
+// byId: optional Map(arxiv_id -> paper) used to resolve paper.related (an
+// array of arxiv_ids from relate.js, computed worker-side) into titles/links.
+// Omitted by callers that don't have the full corpus loaded (e.g. live
+// search results, which have no .related anyway).
+function relatedHtml(paper, byId) {
+  if (!paper.related || !paper.related.length || !byId) return "";
+  const items = paper.related
+    .map((id) => byId.get(id))
+    .filter(Boolean)
+    .map((p) => `<a href="${escapeHtml(p.abs_url || "#")}" target="_blank" rel="noopener">${escapeHtml(p.title)}</a>`);
+  if (!items.length) return "";
+  return `<div class="related"><span class="related-label">Related:</span> ${items.join(" &middot; ")}</div>`;
+}
+
+export function paperCardHtml(paper, isSaved, byId = null) {
   const diffBadge = paper.difficulty
     ? `<span class="difficulty-badge">${escapeHtml(paper.difficulty)}</span>`
     : "";
@@ -28,6 +42,7 @@ export function paperCardHtml(paper, isSaved) {
       ${laymanBox}
       <div class="summary">${summary}</div>
       ${tagsHtml}
+      ${relatedHtml(paper, byId)}
       <div class="paper-footer">
         <span class="category-tag">${escapeHtml(paper.primary_category || paper.source || "")}</span>
         <span class="date">${escapeHtml(paper.published || "")}</span>

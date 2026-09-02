@@ -19,7 +19,7 @@ async function load() {
   const items = savedRows.map((s) => byId.get(s.arxiv_id)).filter(Boolean);
 
   emptyEl.hidden = items.length !== 0;
-  resultsEl.innerHTML = items.map((p) => paperCardHtml(p, true)).join("");
+  resultsEl.innerHTML = items.map((p) => paperCardHtml(p, true, byId)).join("");
 }
 
 wireSaveButtons(resultsEl, "saved", () => load());
