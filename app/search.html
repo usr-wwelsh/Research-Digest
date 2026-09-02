@@ -12,7 +12,10 @@
   <div class="container">
     <div id="nav"></div>
     <h1>Search</h1>
-    <input id="q" class="searchbar" type="search" placeholder="Search arXiv, Semantic Scholar, OpenReview…" autocomplete="off" />
+    <div class="search-row">
+      <input id="q" class="searchbar" type="search" placeholder="Search arXiv, Semantic Scholar, OpenReview…" autocomplete="off" />
+      <button id="add-interest-btn" class="btn" type="button" disabled title="Fetch and summarize new papers matching this search, from now on">+ Add as interest</button>
+    </div>
     <div class="papers-grid" id="results"></div>
     <div id="empty" class="empty" hidden>No results. Try a different search.</div>
     <div id="hint" class="empty">Search live across all three sources — results here aren't in your digest yet.</div>

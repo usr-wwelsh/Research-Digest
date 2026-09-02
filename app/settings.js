@@ -1,5 +1,5 @@
 import { getAll, put, del } from "./db.js";
-import { navHtml, interestRowHtml, setStatus } from "./ui-common.js";
+import { navHtml, interestRowHtml, setStatus, slugify } from "./ui-common.js";
 import { fetchNewPapers, onRemoteSummaryStatus } from "./refresh.js";
 import { DEFAULT_INTERESTS } from "./default-interests.js";
 
@@ -13,10 +13,6 @@ const refreshBtn = document.getElementById("refresh-btn");
 
 let interests = [];
 let removedIds = [];
-
-function slugify(name) {
-  return (name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "") || `interest-${Date.now()}`;
-}
 
 function render() {
   rowsEl.innerHTML = interests.map((it, i) => interestRowHtml(it, i)).join("");

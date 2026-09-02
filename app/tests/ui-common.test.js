@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { escapeHtml, paperCardHtml, navHtml, interestRowHtml, progressPercent, corpusStats, corpusStatsHtml } from "../ui-common.js";
+import { escapeHtml, paperCardHtml, navHtml, interestRowHtml, progressPercent, corpusStats, corpusStatsHtml, slugify } from "../ui-common.js";
 
 test("escapeHtml escapes all five special characters", () => {
   assert.equal(escapeHtml(`<a href="x">'&'</a>`), "&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;");
@@ -120,6 +120,19 @@ test("corpusStatsHtml pluralizes paper/saved counts otherwise", () => {
   const html = corpusStatsHtml({ total: 0, summarized: 0, pct: 0, saved: 0 });
   assert.match(html, /0 papers on this device/);
   assert.match(html, /0 papers saved/);
+});
+
+test("slugify lowercases and hyphenates non-alphanumeric runs", () => {
+  assert.equal(slugify("Sparse Mixture of Experts!"), "sparse-mixture-of-experts");
+});
+
+test("slugify trims leading/trailing hyphens", () => {
+  assert.equal(slugify("  --Edge AI--  "), "edge-ai");
+});
+
+test("slugify falls back to a timestamped id for empty input", () => {
+  assert.match(slugify(""), /^interest-\d+$/);
+  assert.match(slugify(null), /^interest-\d+$/);
 });
 
 test("navHtml marks the active page's link", () => {

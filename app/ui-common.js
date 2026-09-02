@@ -57,6 +57,10 @@ export function paperCardHtml(paper, isSaved, byId = null) {
 
 export const ALL_SOURCES = ["arxiv", "semanticscholar", "openreview"];
 
+export function slugify(name) {
+  return (name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "") || `interest-${Date.now()}`;
+}
+
 // Pure aggregation over the local corpus, split from the HTML renderer
 // below so the counting logic is unit-testable without a DOM.
 export function corpusStats(papers, savedCount) {
