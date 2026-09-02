@@ -57,6 +57,21 @@ export function paperCardHtml(paper, isSaved, byId = null) {
 
 export const ALL_SOURCES = ["arxiv", "semanticscholar", "openreview"];
 
+// Pure aggregation over the local corpus, split from the HTML renderer
+// below so the counting logic is unit-testable without a DOM.
+export function corpusStats(papers, savedCount) {
+  const total = papers.length;
+  const summarized = papers.filter((p) => p.summary).length;
+  const pct = total ? Math.round((summarized / total) * 100) : 0;
+  return { total, summarized, pct, saved: savedCount };
+}
+
+export function corpusStatsHtml(stats) {
+  const paperWord = stats.total === 1 ? "paper" : "papers";
+  const savedWord = stats.saved === 1 ? "paper" : "papers";
+  return `${stats.total} ${paperWord} on this device &middot; ${stats.summarized} summarized (${stats.pct}%) &middot; ${stats.saved} ${savedWord} saved`;
+}
+
 export function interestRowHtml(interest, index) {
   const sourcesHtml = ALL_SOURCES.map((s) => {
     const checked = (interest.sources || []).includes(s) ? "checked" : "";

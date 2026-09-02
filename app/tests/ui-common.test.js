@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { escapeHtml, paperCardHtml, navHtml, interestRowHtml, progressPercent } from "../ui-common.js";
+import { escapeHtml, paperCardHtml, navHtml, interestRowHtml, progressPercent, corpusStats, corpusStatsHtml } from "../ui-common.js";
 
 test("escapeHtml escapes all five special characters", () => {
   assert.equal(escapeHtml(`<a href="x">'&'</a>`), "&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;");
@@ -99,6 +99,27 @@ test("progressPercent treats a missing/zero total as 0, not NaN or Infinity", ()
   assert.equal(progressPercent(0, 0), 0);
   assert.equal(progressPercent(3, null), 0);
   assert.equal(progressPercent(3, undefined), 0);
+});
+
+test("corpusStats counts total, summarized, and saved", () => {
+  const papers = [{ summary: "x" }, { summary: "y" }, {}];
+  assert.deepEqual(corpusStats(papers, 2), { total: 3, summarized: 2, pct: 67, saved: 2 });
+});
+
+test("corpusStats reports 0% on an empty corpus without dividing by zero", () => {
+  assert.deepEqual(corpusStats([], 0), { total: 0, summarized: 0, pct: 0, saved: 0 });
+});
+
+test("corpusStatsHtml singularizes paper/saved counts of exactly 1", () => {
+  const html = corpusStatsHtml({ total: 1, summarized: 1, pct: 100, saved: 1 });
+  assert.match(html, /1 paper on this device/);
+  assert.match(html, /1 paper saved/);
+});
+
+test("corpusStatsHtml pluralizes paper/saved counts otherwise", () => {
+  const html = corpusStatsHtml({ total: 0, summarized: 0, pct: 0, saved: 0 });
+  assert.match(html, /0 papers on this device/);
+  assert.match(html, /0 papers saved/);
 });
 
 test("navHtml marks the active page's link", () => {

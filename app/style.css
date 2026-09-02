@@ -102,6 +102,7 @@ p.summary { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5rem; }
 .batch-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
   padding: 0.6rem 0.9rem; border: 1px solid var(--border); border-radius: 4px; background: var(--panel); }
 .muted { color: var(--muted); font-size: 0.8rem; }
+.stats-line { margin: -0.75rem 0 1.5rem; }
 
 /* Generic bordered button, reused for load-more/settings actions */
 .btn { background: var(--panel); border: 1px solid var(--line); color: var(--text);

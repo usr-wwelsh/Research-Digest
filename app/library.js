@@ -3,7 +3,7 @@
 // selected). Built for reading the existing local corpus with no network,
 // e.g. while the relay/homelab is unreachable.
 import { getAll } from "./db.js";
-import { navHtml, paperCardHtml, escapeHtml, wireSaveButtons, getSavedIdSet, setStatus } from "./ui-common.js";
+import { navHtml, paperCardHtml, escapeHtml, wireSaveButtons, getSavedIdSet, setStatus, corpusStats, corpusStatsHtml } from "./ui-common.js";
 import { summarizePapers, getInterests, onRemoteSummaryStatus } from "./refresh.js";
 
 document.getElementById("nav").innerHTML = navHtml("library.html");
@@ -11,6 +11,7 @@ document.getElementById("nav").innerHTML = navHtml("library.html");
 const resultsEl = document.getElementById("results");
 const emptyEl = document.getElementById("empty");
 const noneMatchEl = document.getElementById("none-match");
+const statsEl = document.getElementById("stats");
 const qEl = document.getElementById("q");
 const categoryEl = document.getElementById("filter-category");
 const sourceEl = document.getElementById("filter-source");
@@ -82,6 +83,7 @@ function updateBatchBar(visible) {
 
 function render() {
   emptyEl.hidden = allPapers.length !== 0;
+  statsEl.innerHTML = corpusStatsHtml(corpusStats(allPapers, savedIds.size));
   const visible = filteredSorted();
   noneMatchEl.hidden = !(allPapers.length !== 0 && visible.length === 0);
   const byId = new Map(allPapers.map((p) => [p.arxiv_id, p]));
@@ -101,6 +103,7 @@ resultsEl.addEventListener("change", (event) => {
 wireSaveButtons(resultsEl, "library", (id, nowSaved) => {
   if (nowSaved) savedIds.add(id);
   else savedIds.delete(id);
+  statsEl.innerHTML = corpusStatsHtml(corpusStats(allPapers, savedIds.size));
 });
 
 selectAllEl.addEventListener("change", () => {
