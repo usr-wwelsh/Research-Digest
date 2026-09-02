@@ -194,14 +194,33 @@ export function wireSearchSaveButtons(container, getResultById, source = "search
   });
 }
 
-export function setStatus(text) {
+// done/total come from models.worker.js's queue counters, so total is
+// always a real positive count when present — still clamp defensively
+// since this also has to tolerate a bare string/null status.
+export function progressPercent(done, total) {
+  if (!total || total <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+}
+
+// status: a plain string (most callers — fetchNewPapers, "Saved.", error
+// messages), null/undefined (clear), or {message, done, total} (worker
+// summarize progress, see models.worker.js's currentStatus()) which also
+// renders a progress bar.
+export function setStatus(status) {
   const el = document.getElementById("status-line");
   if (!el) return;
-  if (!text) {
+  const message = typeof status === "string" ? status : status && status.message;
+  if (!message) {
     el.hidden = true;
-    el.textContent = "";
-  } else {
-    el.hidden = false;
-    el.textContent = text;
+    el.innerHTML = "";
+    el.classList.remove("has-progress");
+    return;
   }
+  const hasProgress = typeof status === "object" && Number.isFinite(status.total) && status.total > 0;
+  el.hidden = false;
+  el.classList.toggle("has-progress", hasProgress);
+  el.innerHTML = hasProgress
+    ? `<span class="status-text">${escapeHtml(message)}</span>` +
+      `<div class="status-bar"><div class="status-bar-fill" style="width: ${progressPercent(status.done, status.total)}%"></div></div>`
+    : escapeHtml(message);
 }

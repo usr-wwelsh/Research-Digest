@@ -43,10 +43,10 @@ let embedderPromise = null;
 
 function reportProgress(data) {
   if (data.status === "initiate") {
-    broadcast({ type: "progress", message: `Loading model: ${data.file}…` });
+    broadcast({ type: "progress", status: { message: `Loading model: ${data.file}…` } });
   } else if (data.status === "progress") {
     const pct = data.progress != null ? ` ${Math.round(data.progress)}%` : "";
-    broadcast({ type: "progress", message: `Loading model: ${data.file}${pct}…` });
+    broadcast({ type: "progress", status: { message: `Loading model: ${data.file}${pct}…` } });
   }
 }
 
@@ -129,9 +129,9 @@ function looksSystemic(err) {
   return /create a session|session creation|backend not found/i.test(msg);
 }
 
-function currentStatusText() {
+function currentStatus() {
   if (!running) return null;
-  return `Summarizing ${queueDone + 1}/${queueTotal}…`;
+  return { message: `Summarizing ${queueDone + 1}/${queueTotal}…`, done: queueDone, total: queueTotal };
 }
 
 // This is an MPA, not an SPA (see refresh.js) — every nav is a full page
@@ -175,7 +175,7 @@ async function runQueue() {
   while (true) {
     while (queue.length) {
       const { paper, keywords } = queue.shift();
-      broadcast({ type: "progress", message: currentStatusText() });
+      broadcast({ type: "progress", status: currentStatus() });
       try {
         if (!paper.summary && !summarizerBroken) {
           const result = await summarizeText(paper.title, paper.abstract, paper.primary_category, keywords);
@@ -188,7 +188,7 @@ async function runQueue() {
       } catch (err) {
         if (!summarizerBroken && looksSystemic(err)) {
           summarizerBroken = true;
-          broadcast({ type: "progress", message: "Local summarizer unavailable this session — showing abstracts instead." });
+          broadcast({ type: "progress", status: { message: "Local summarizer unavailable this session — showing abstracts instead." } });
         }
         console.warn("models.worker: failed for", paper.arxiv_id, err);
       }
@@ -211,7 +211,7 @@ async function runQueue() {
   running = false;
   queueTotal = 0;
   queueDone = 0;
-  broadcast({ type: "progress", message: null });
+  broadcast({ type: "progress", status: null });
 }
 
 // Dedupes against whatever's already queued or actively being processed —
@@ -282,7 +282,7 @@ self.onconnect = (event) => {
       if (type === "summarizeBatch") {
         enqueueBatch(id, payload.papers, payload.interests, port);
       } else if (type === "getStatus") {
-        port.postMessage({ id, ok: true, result: currentStatusText() });
+        port.postMessage({ id, ok: true, result: currentStatus() });
       }
     });
   };

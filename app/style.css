@@ -40,6 +40,12 @@ a:hover { text-decoration-color: var(--text); }
 .status-line::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 0.55rem;
   border-radius: 50%; background: var(--text); animation: status-pulse 1.4s ease-in-out infinite; }
 @keyframes status-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+/* A real progress bar replaces the pulsing dot once done/total are known
+   (see setStatus in ui-common.js) — the bar itself already communicates
+   "in progress", so the dot would be redundant. */
+.status-line.has-progress::before { display: none; }
+.status-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 0.5rem; overflow: hidden; }
+.status-bar-fill { height: 100%; background: var(--text); transition: width 0.2s ease; }
 
 h1 { font-weight: 600; font-size: 1.4rem; letter-spacing: -0.01em; margin: 0 0 1.25rem; color: var(--text); }
 p.summary { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5rem; }

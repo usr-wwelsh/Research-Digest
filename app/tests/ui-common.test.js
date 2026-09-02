@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { escapeHtml, paperCardHtml, navHtml, interestRowHtml } from "../ui-common.js";
+import { escapeHtml, paperCardHtml, navHtml, interestRowHtml, progressPercent } from "../ui-common.js";
 
 test("escapeHtml escapes all five special characters", () => {
   assert.equal(escapeHtml(`<a href="x">'&'</a>`), "&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;");
@@ -87,6 +87,18 @@ test("interestRowHtml treats enabled as true unless explicitly false", () => {
   const disabledHtml = interestRowHtml({ name: "X", enabled: false }, 0);
   assert.match(enabledHtml, /data-field="enabled" checked/);
   assert.doesNotMatch(disabledHtml, /data-field="enabled" checked/);
+});
+
+test("progressPercent rounds done/total to a whole percentage", () => {
+  assert.equal(progressPercent(3, 12), 25);
+  assert.equal(progressPercent(12, 12), 100);
+  assert.equal(progressPercent(0, 12), 0);
+});
+
+test("progressPercent treats a missing/zero total as 0, not NaN or Infinity", () => {
+  assert.equal(progressPercent(0, 0), 0);
+  assert.equal(progressPercent(3, null), 0);
+  assert.equal(progressPercent(3, undefined), 0);
 });
 
 test("navHtml marks the active page's link", () => {

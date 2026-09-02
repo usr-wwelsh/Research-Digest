@@ -22,10 +22,10 @@ function getWorker() {
   if (!worker) {
     worker = new SharedWorker(new URL("./models.worker.js", import.meta.url), { type: "module" });
     worker.port.onmessage = (event) => {
-      const { id, ok, result, error, type, message } = event.data;
+      const { id, ok, result, error, type, status } = event.data;
       if (type === "progress") {
-        if (activeOnStatus) activeOnStatus(message);
-        if (globalStatusCallback) globalStatusCallback(message);
+        if (activeOnStatus) activeOnStatus(status);
+        if (globalStatusCallback) globalStatusCallback(status);
         return;
       }
       const resolver = pending.get(id);
