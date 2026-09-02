@@ -13,15 +13,20 @@ export function escapeHtml(s) {
 // byId: optional Map(arxiv_id -> paper) used to resolve paper.related (an
 // array of arxiv_ids from relate.js, computed worker-side) into titles/links.
 // Omitted by callers that don't have the full corpus loaded (e.g. live
-// search results, which have no .related anyway).
+// search results, which have no .related anyway). relate.js keeps the top 6
+// nearest neighbors, but a card is one entry in a flat list, not a detail
+// page — only show a few, truncated to a chip width, full title on hover.
+const RELATED_SHOWN = 3;
+
 function relatedHtml(paper, byId) {
   if (!paper.related || !paper.related.length || !byId) return "";
   const items = paper.related
+    .slice(0, RELATED_SHOWN)
     .map((id) => byId.get(id))
     .filter(Boolean)
-    .map((p) => `<a href="${escapeHtml(p.abs_url || "#")}" target="_blank" rel="noopener">${escapeHtml(p.title)}</a>`);
+    .map((p) => `<a href="${escapeHtml(p.abs_url || "#")}" target="_blank" rel="noopener" title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</a>`);
   if (!items.length) return "";
-  return `<div class="related"><span class="related-label">Related:</span> ${items.join(" &middot; ")}</div>`;
+  return `<div class="related"><span class="related-label">Related</span>${items.join("")}</div>`;
 }
 
 export function paperCardHtml(paper, isSaved, byId = null) {

@@ -69,6 +69,12 @@ test("paperCardHtml lists resolvable related papers as links", () => {
   assert.ok(!html.includes("missing"));
 });
 
+test("paperCardHtml shows at most 3 related papers even if more are stored", () => {
+  const byId = new Map(["b", "c", "d", "e"].map((id) => [id, { arxiv_id: id, title: `Paper ${id}`, abs_url: `https://x/${id}` }]));
+  const html = paperCardHtml({ arxiv_id: "a", title: "T", related: ["b", "c", "d", "e"] }, false, byId);
+  assert.equal((html.match(/href="https:\/\/x\//g) || []).length, 3);
+});
+
 test("interestRowHtml checks only the interest's own enabled sources", () => {
   const html = interestRowHtml({ name: "X", keywords: ["a"], sources: ["arxiv"] }, 0);
   const arxivMatch = html.match(/data-source="arxiv"[^/]*\/>/)[0];
