@@ -1,15 +1,9 @@
-![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![PWA](https://img.shields.io/badge/installable-PWA-6ba3ff.svg)
-![Summaries](https://img.shields.io/badge/summaries-in--browser-ff6b6b.svg)
-![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)
+<img src="icons/icon-512.png" alt="Research Digest logo" width="96" />
 
-![research-digest status](https://vitals.wwel.sh/badge/proxmox/research-digest/status.svg)
-![research-digest uptime](https://vitals.wwel.sh/badge/proxmox/research-digest/uptime.svg)
-![research-digest cpu](https://vitals.wwel.sh/badge/proxmox/research-digest/cpu.svg)
-![research-digest ram](https://vitals.wwel.sh/badge/proxmox/research-digest/ram.svg)
-![research-digest cpu trend](https://vitals.wwel.sh/badge/proxmox/research-digest/sparkline.svg?metric=cpu)
-![research-digest ram trend](https://vitals.wwel.sh/badge/proxmox/research-digest/sparkline.svg?metric=ram)
+[![Read about the commits](https://img.shields.io/badge/commits-code%20blog-1a1a1a?style=flat-square)](https://wwel.sh/digest.html?repo=research-digest)
+
+[![research-digest status](https://vitals.wwel.sh/badge/proxmox/research-digest/status.svg)](https://github.com/usr-wwelsh/vitalSVG) [![research-digest cpu](https://vitals.wwel.sh/badge/proxmox/research-digest/cpu.svg)](https://github.com/usr-wwelsh/vitalSVG) [![research-digest ram](https://vitals.wwel.sh/badge/proxmox/research-digest/ram.svg)](https://github.com/usr-wwelsh/vitalSVG) [![research-digest uptime](https://vitals.wwel.sh/badge/proxmox/research-digest/uptime.svg)](https://github.com/usr-wwelsh/vitalSVG)
+[![research-digest cpu trend](https://vitals.wwel.sh/badge/proxmox/research-digest/sparkline.svg?metric=cpu)](https://github.com/usr-wwelsh/vitalSVG) [![research-digest ram trend](https://vitals.wwel.sh/badge/proxmox/research-digest/sparkline.svg?metric=ram)](https://github.com/usr-wwelsh/vitalSVG)
 
 # Research Digest
 
