@@ -242,6 +242,34 @@ function enqueueBatch(jobId, papers, interests, port) {
   runQueue();
 }
 
+// Drops every paper still sitting in `queue` (i.e. not yet claimed by
+// queue.shift() in runQueue) and resolves whichever jobs were waiting only
+// on those, immediately, with whatever they already had processed. A paper
+// mid-processing right now is left alone — runQueue notices the emptied
+// queue right after it finishes and winds down on its own.
+function cancelAll() {
+  const dropped = queue.splice(0, queue.length);
+  const affectedJobIds = new Set();
+  for (const { paper } of dropped) {
+    const jobIds = waiters.get(paper.arxiv_id);
+    if (!jobIds) continue;
+    waiters.delete(paper.arxiv_id);
+    for (const jobId of jobIds) affectedJobIds.add(jobId);
+  }
+  for (const jobId of affectedJobIds) {
+    jobRemaining.delete(jobId);
+    const port = jobPorts.get(jobId);
+    jobPorts.delete(jobId);
+    if (port) port.postMessage({ id: jobId, ok: true, result: { processed: queueDone, total: queueTotal, cancelled: true } });
+  }
+  persistQueueState();
+  // Without this, the status line just sits frozen on the last
+  // "Summarizing N/M…" until the in-flight paper finishes on its own —
+  // which can be a long wait during model load. Give immediate feedback
+  // that the click landed even though that one paper can't be interrupted.
+  broadcast({ type: "progress", status: running ? { message: "Cancelling…" } : null });
+}
+
 // Runs once, the moment this worker instance boots (including after the
 // browser reaped a previous instance mid-batch). Rehydrates from whatever
 // was last persisted and, if there's still unfinished work, resumes the
@@ -283,6 +311,9 @@ self.onconnect = (event) => {
         enqueueBatch(id, payload.papers, payload.interests, port);
       } else if (type === "getStatus") {
         port.postMessage({ id, ok: true, result: currentStatus() });
+      } else if (type === "cancel") {
+        cancelAll();
+        port.postMessage({ id, ok: true, result: { cancelled: true } });
       }
     });
   };

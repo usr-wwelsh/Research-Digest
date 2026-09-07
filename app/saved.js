@@ -1,12 +1,11 @@
 import { getAll } from "./db.js";
 import { navHtml, paperCardHtml, wireSaveButtons, setStatus } from "./ui-common.js";
-import { fetchNewPapers, onRemoteSummaryStatus } from "./refresh.js";
+import { onRemoteSummaryStatus, cancelSummarize } from "./refresh.js";
 
 document.getElementById("nav").innerHTML = navHtml("saved.html");
 
 const resultsEl = document.getElementById("results");
 const emptyEl = document.getElementById("empty");
-const refreshBtn = document.getElementById("refresh-btn");
 
 // Un-saving here only removes the `saved` pointer, never the underlying
 // `papers` record (see ui-common.toggleSave / del("saved", ...)) — a paper
@@ -24,14 +23,5 @@ async function load() {
 
 wireSaveButtons(resultsEl, "saved", () => load());
 
-refreshBtn.addEventListener("click", async () => {
-  refreshBtn.disabled = true;
-  try {
-    await fetchNewPapers(setStatus);
-  } finally {
-    refreshBtn.disabled = false;
-  }
-});
-
-onRemoteSummaryStatus(setStatus);
+onRemoteSummaryStatus((status) => setStatus(status, cancelSummarize));
 load();

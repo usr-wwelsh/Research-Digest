@@ -4,7 +4,7 @@
 // e.g. while the relay/homelab is unreachable.
 import { getAll } from "./db.js";
 import { navHtml, paperCardHtml, escapeHtml, wireSaveButtons, getSavedIdSet, setStatus, corpusStats, corpusStatsHtml } from "./ui-common.js";
-import { summarizePapers, getInterests, onRemoteSummaryStatus } from "./refresh.js";
+import { fetchNewPapers, summarizePapers, getInterests, onRemoteSummaryStatus, cancelSummarize } from "./refresh.js";
 
 document.getElementById("nav").innerHTML = navHtml("library.html");
 
@@ -20,6 +20,7 @@ const hasSummaryEl = document.getElementById("filter-has-summary");
 const selectAllEl = document.getElementById("select-all");
 const selectCountEl = document.getElementById("select-count");
 const summarizeBtn = document.getElementById("summarize-btn");
+const fetchBtn = document.getElementById("fetch-btn");
 
 let allPapers = [];
 let savedIds = new Set();
@@ -134,8 +135,23 @@ summarizeBtn.addEventListener("click", async () => {
   }
 });
 
+fetchBtn.addEventListener("click", async () => {
+  fetchBtn.disabled = true;
+  try {
+    await fetchNewPapers(setStatus);
+    allPapers = await getAll("papers");
+    refreshFilterOptions();
+    render();
+  } catch (err) {
+    console.error("library: fetch failed", err);
+    setStatus("Fetch failed — check your connection.");
+  } finally {
+    fetchBtn.disabled = false;
+  }
+});
+
 async function init() {
-  onRemoteSummaryStatus(setStatus);
+  onRemoteSummaryStatus((status) => setStatus(status, cancelSummarize));
   interests = await getInterests();
   [allPapers, savedIds] = await Promise.all([getAll("papers"), getSavedIdSet()]);
   refreshFilterOptions();

@@ -25,10 +25,6 @@ a:hover { text-decoration-color: var(--text); }
 .topbar nav a { font-size: 0.85rem; color: var(--muted); text-decoration: none; }
 .topbar nav a:hover { color: var(--text); }
 .topbar nav a.active { color: var(--text); border-bottom: 1px solid var(--text); padding-bottom: 2px; }
-.refresh-btn { background: var(--panel); border: 1px solid var(--line); color: var(--text);
-  border-radius: 4px; padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.8rem; font-family: inherit; }
-.refresh-btn:hover { border-color: var(--muted); }
-.refresh-btn:disabled { opacity: 0.5; cursor: default; }
 /* Sticky, not just a quiet inline note — this reflects work that may be
    running in the worker regardless of which page started it (see
    refresh.js's onRemoteSummaryStatus), so it needs to stay visible as you
@@ -46,6 +42,10 @@ a:hover { text-decoration-color: var(--text); }
 .status-line.has-progress::before { display: none; }
 .status-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 0.5rem; overflow: hidden; }
 .status-bar-fill { height: 100%; background: var(--text); transition: width 0.2s ease; }
+.status-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.status-cancel-btn { padding: 0.2rem 0.6rem; font-size: 0.75rem; flex-shrink: 0; }
+
+.fetch-bar { margin: 0 0 1.5rem; }
 
 h1 { font-weight: 600; font-size: 1.4rem; letter-spacing: -0.01em; margin: 0 0 1.25rem; color: var(--text); }
 p.summary { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5rem; }

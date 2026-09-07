@@ -5,14 +5,13 @@
 // before revealing further.
 import { getAll } from "./db.js";
 import { navHtml, paperCardHtml, wireSaveButtons, ensureSeedImported, getSavedIdSet, setStatus } from "./ui-common.js";
-import { fetchNewPapers, summarizePapers, getInterests, onRemoteSummaryStatus } from "./refresh.js";
+import { fetchNewPapers, summarizePapers, getInterests, onRemoteSummaryStatus, cancelSummarize } from "./refresh.js";
 
 document.getElementById("nav").innerHTML = navHtml("digest.html");
 
 const papersEl = document.getElementById("papers");
 const emptyEl = document.getElementById("empty");
 const filterEl = document.getElementById("filter");
-const refreshBtn = document.getElementById("refresh-btn");
 
 const PAGE_SIZE = 5;
 
@@ -21,6 +20,17 @@ let savedIds = new Set();
 let interests = [];
 let revealed = PAGE_SIZE;
 let fetchingMore = false;
+
+// Set once the user cancels a summarize run on this page, so doRefreshView
+// stops immediately resubmitting the same still-unsummarized visible batch
+// (those papers just show their abstract instead, see paperCardHtml).
+// Resets on next page load — this is a per-visit opt-out, not permanent.
+let autoSummarizeSuspended = false;
+
+function handleCancelSummarize() {
+  autoSummarizeSuspended = true;
+  cancelSummarize();
+}
 
 function filteredSorted() {
   const q = filterEl.value.toLowerCase().trim();
@@ -60,7 +70,7 @@ async function doRefreshView() {
   renderList(filtered, visible);
 
   const toSummarize = visible.filter((p) => !p.summary || !p.embedding);
-  if (toSummarize.length) {
+  if (toSummarize.length && !autoSummarizeSuspended) {
     await summarizePapers(toSummarize, interests, setStatus);
     allPapers = await getAll("papers");
     const filtered2 = filteredSorted();
@@ -121,31 +131,21 @@ papersEl.addEventListener("click", async (event) => {
 });
 
 async function init() {
-  onRemoteSummaryStatus(setStatus);
-  await ensureSeedImported();
-  interests = await getInterests();
-  [allPapers, savedIds] = await Promise.all([getAll("papers"), getSavedIdSet()]);
-  await refreshView();
-
+  // Wired before the potentially long-running refreshView() below, so a
+  // slow/stuck model load can't leave the filter box or Cancel button dead
+  // (see handleCancelSummarize) — a promise awaited later in this function
+  // never blocks these from firing.
+  onRemoteSummaryStatus((status) => setStatus(status, handleCancelSummarize));
   wireSaveButtons(papersEl, "digest");
   filterEl.addEventListener("input", () => {
     revealed = PAGE_SIZE;
     refreshView();
   });
 
-  refreshBtn.addEventListener("click", async () => {
-    refreshBtn.disabled = true;
-    try {
-      await fetchNewPapers(setStatus);
-      allPapers = await getAll("papers");
-      await refreshView();
-    } catch (err) {
-      console.error("digest: refresh failed", err);
-      setStatus("Refresh failed — check your connection.");
-    } finally {
-      refreshBtn.disabled = false;
-    }
-  });
+  await ensureSeedImported();
+  interests = await getInterests();
+  [allPapers, savedIds] = await Promise.all([getAll("papers"), getSavedIdSet()]);
+  await refreshView();
 }
 
 init();

@@ -4,7 +4,7 @@ import * as openreview from "./sources/openreview.js";
 import { getAll, put } from "./db.js";
 import { findDuplicate } from "./dedup.js";
 import { navHtml, paperCardHtml, wireSearchSaveButtons, getSavedIdSet, setStatus, slugify, ALL_SOURCES } from "./ui-common.js";
-import { fetchNewPapers, onRemoteSummaryStatus } from "./refresh.js";
+import { onRemoteSummaryStatus, cancelSummarize } from "./refresh.js";
 import { DEFAULT_INTERESTS } from "./default-interests.js";
 
 document.getElementById("nav").innerHTML = navHtml("search.html");
@@ -13,7 +13,6 @@ const inputEl = document.getElementById("q");
 const resultsEl = document.getElementById("results");
 const emptyEl = document.getElementById("empty");
 const hintEl = document.getElementById("hint");
-const refreshBtn = document.getElementById("refresh-btn");
 const addInterestBtn = document.getElementById("add-interest-btn");
 
 let existingPapers = [];
@@ -87,19 +86,9 @@ addInterestBtn.addEventListener("click", async () => {
 });
 
 async function init() {
-  onRemoteSummaryStatus(setStatus);
+  onRemoteSummaryStatus((status) => setStatus(status, cancelSummarize));
   [existingPapers, savedIds] = await Promise.all([getAll("papers"), getSavedIdSet()]);
   wireSearchSaveButtons(resultsEl, (id) => currentResults.get(id), "search");
-
-  refreshBtn.addEventListener("click", async () => {
-    refreshBtn.disabled = true;
-    try {
-      await fetchNewPapers(setStatus);
-      existingPapers = await getAll("papers");
-    } finally {
-      refreshBtn.disabled = false;
-    }
-  });
 }
 
 init();

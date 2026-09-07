@@ -1,6 +1,6 @@
 import { getAll, put, del } from "./db.js";
 import { navHtml, interestRowHtml, setStatus, slugify } from "./ui-common.js";
-import { fetchNewPapers, onRemoteSummaryStatus } from "./refresh.js";
+import { onRemoteSummaryStatus, cancelSummarize } from "./refresh.js";
 import { DEFAULT_INTERESTS } from "./default-interests.js";
 
 document.getElementById("nav").innerHTML = navHtml("settings.html");
@@ -9,7 +9,6 @@ const rowsEl = document.getElementById("rows");
 const addBtn = document.getElementById("add-btn");
 const saveBtn = document.getElementById("save-btn");
 const resetBtn = document.getElementById("reset-btn");
-const refreshBtn = document.getElementById("refresh-btn");
 
 let interests = [];
 let removedIds = [];
@@ -71,20 +70,8 @@ resetBtn.addEventListener("click", async () => {
   render();
 });
 
-// Settings doesn't display papers, so there's nothing to lazily summarize
-// here — just pull new candidates; the digest page summarizes whatever's
-// visible next time you open it.
-refreshBtn.addEventListener("click", async () => {
-  refreshBtn.disabled = true;
-  try {
-    await fetchNewPapers(setStatus);
-  } finally {
-    refreshBtn.disabled = false;
-  }
-});
-
 async function init() {
-  onRemoteSummaryStatus(setStatus);
+  onRemoteSummaryStatus((status) => setStatus(status, cancelSummarize));
   interests = await getAll("interests");
   if (!interests.length) {
     for (const it of DEFAULT_INTERESTS) await put("interests", it);

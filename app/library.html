@@ -18,6 +18,10 @@
     <p class="summary">Everything already on this device — browse and re-read offline. Nothing here fetches or summarizes until you ask it to.</p>
     <p id="stats" class="muted stats-line"></p>
 
+    <div class="fetch-bar">
+      <button id="fetch-btn" class="btn" type="button" title="Fetch new papers for your enabled interests">Fetch new papers</button>
+    </div>
+
     <input id="q" class="searchbar" type="search" placeholder="Filter by title, summary, tag…" autocomplete="off" />
 
     <div class="filter-bar">
@@ -34,7 +38,7 @@
     </div>
 
     <div class="papers-grid library-grid" id="results"></div>
-    <div id="empty" class="empty" hidden>Nothing in your library yet — visit Digest or Search to fetch some papers.</div>
+    <div id="empty" class="empty" hidden>Nothing in your library yet — hit Fetch above to pull your first batch.</div>
     <div id="none-match" class="empty" hidden>No papers match these filters.</div>
   </div>
   <script type="module" src="pwa.js"></script>

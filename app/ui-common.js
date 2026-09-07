@@ -126,7 +126,6 @@ export function navHtml(active) {
       <a class="brand" href="../index.html">${BRAND_GLYPH_SVG} Research Digest</a>
       <nav>
         ${links}
-        <button id="refresh-btn" class="refresh-btn" type="button" title="Fetch and summarize new papers">Refresh</button>
       </nav>
     </div>
     <div id="status-line" class="status-line" hidden></div>`;
@@ -229,8 +228,11 @@ export function progressPercent(done, total) {
 // status: a plain string (most callers — fetchNewPapers, "Saved.", error
 // messages), null/undefined (clear), or {message, done, total} (worker
 // summarize progress, see models.worker.js's currentStatus()) which also
-// renders a progress bar.
-export function setStatus(status) {
+// renders a progress bar. Worker-driven object statuses are the only ones
+// that can show a Cancel button (onCancel) — there's currently no way to
+// abort an in-flight arXiv fetch, so string statuses never get one even if
+// a caller passes onCancel.
+export function setStatus(status, onCancel = null) {
   const el = document.getElementById("status-line");
   if (!el) return;
   const message = typeof status === "string" ? status : status && status.message;
@@ -241,10 +243,17 @@ export function setStatus(status) {
     return;
   }
   const hasProgress = typeof status === "object" && Number.isFinite(status.total) && status.total > 0;
+  const cancelable = typeof status === "object" && !!onCancel;
+  const bar = hasProgress
+    ? `<div class="status-bar"><div class="status-bar-fill" style="width: ${progressPercent(status.done, status.total)}%"></div></div>`
+    : "";
   el.hidden = false;
   el.classList.toggle("has-progress", hasProgress);
-  el.innerHTML = hasProgress
-    ? `<span class="status-text">${escapeHtml(message)}</span>` +
-      `<div class="status-bar"><div class="status-bar-fill" style="width: ${progressPercent(status.done, status.total)}%"></div></div>`
-    : escapeHtml(message);
+  el.innerHTML = cancelable
+    ? `<div class="status-row"><span class="status-text">${escapeHtml(message)}</span>` +
+      `<button type="button" class="btn status-cancel-btn">Cancel</button></div>${bar}`
+    : `<span class="status-text">${escapeHtml(message)}</span>${bar}`;
+  if (cancelable) {
+    el.querySelector(".status-cancel-btn").addEventListener("click", onCancel, { once: true });
+  }
 }

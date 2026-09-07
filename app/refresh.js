@@ -59,6 +59,15 @@ export function onRemoteSummaryStatus(callback) {
   callWorker("getStatus", {}, () => {}).then(callback).catch(() => {});
 }
 
+// Drops whatever's still queued (but not yet started) in the worker's
+// summarize batch, so a slow/stuck model load doesn't keep a page or its
+// queue occupied indefinitely. The one paper already mid-processing, if
+// any, still finishes naturally — transformers.js gives no way to abort a
+// forward pass already in flight.
+export async function cancelSummarize() {
+  return callWorker("cancel", {});
+}
+
 export async function getInterests() {
   const rows = await getAll("interests");
   return rows.length ? rows : DEFAULT_INTERESTS;
