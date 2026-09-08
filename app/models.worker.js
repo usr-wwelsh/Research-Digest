@@ -11,9 +11,10 @@
 // keeps moving. See refresh.js for the page-side API.
 import { pipeline, env } from "./vendor/transformers.min.js";
 import { difficulty, layman, tags } from "./heuristics.js";
-import { splitSentences, selectSummarySentences } from "./extractive.js";
+import { planExtractiveBatch, assembleExtractiveBatch } from "./extractive.js";
 import { getAll, putMany, getSetting, setSetting, del } from "./db.js";
 import { computeRelated } from "./relate.js";
+import { computeBatchSize } from "./batch-size.js";
 
 // Self-hosted, not transformers.js's jsdelivr default (see
 // scripts/fetch_vendor_assets.sh). Must be the exact asyncify mjs/wasm pair:
@@ -32,6 +33,12 @@ env.backends.onnx.wasm.numThreads = Math.max(1, Math.min(self.navigator?.hardwar
 const EMBEDDING_MODEL = "Xenova/distilbert-base-uncased";
 const EMBEDDER_DTYPE = "q8";
 const SUMMARY_SENTENCE_COUNT = 2;
+// How many papers get summarized/embedded per model call — folding several
+// papers' texts into one tokenize+forward pass amortizes the fixed
+// per-call overhead (see embedBatch below), which dominates at this text
+// length. Sized off deviceMemory so a bigger batch's extra padding cost
+// doesn't blow the memory budget on a cheap phone.
+const BATCH_SIZE = computeBatchSize(self.navigator?.deviceMemory);
 
 const ports = new Set();
 
@@ -70,40 +77,47 @@ async function embedBatch(texts) {
   return out.tolist();
 }
 
-async function embedText(text) {
-  return (await embedBatch([text]))[0];
+// Centroid extractive summaries for a whole chunk of docs at once: one
+// batched call for the doc embeddings, one for every sentence across every
+// doc that needs sentence-level scoring (planExtractiveBatch/
+// assembleExtractiveBatch in extractive.js do the pure grouping/pairing).
+// Kept separate from each other — the tokenizer pads every item in a batch
+// to its longest member, so mixing docs + sentences would pad each short
+// sentence out to document length and erase the win.
+async function extractiveSummaryBatch(texts) {
+  const plan = planExtractiveBatch(texts, SUMMARY_SENTENCE_COUNT);
+  const docEmbeddings = await embedBatch(texts);
+  const flatEmbeddings = plan.flatSentences.length ? await embedBatch(plan.flatSentences) : [];
+  return assembleExtractiveBatch(texts, plan, docEmbeddings, flatEmbeddings, SUMMARY_SENTENCE_COUNT);
 }
 
-// Centroid extractive summary (extractive.js). Sentences are batched
-// together in one forward pass, but kept separate from the (much longer)
-// full-text embedding: the tokenizer pads every item in a batch to its
-// longest member, so mixing doc + sentences would pad each short sentence
-// out to the document's length and erase the win.
-async function extractiveSummary(text) {
-  const sentences = splitSentences(text);
-  const docEmbedding = await embedText(text);
-  if (sentences.length <= SUMMARY_SENTENCE_COUNT) {
-    return { summary: text.trim(), embedding: docEmbedding };
-  }
-  const embeddings = await embedBatch(sentences);
-  const summary = selectSummarySentences(sentences, embeddings, docEmbedding, SUMMARY_SENTENCE_COUNT).join(" ");
-  return { summary, embedding: docEmbedding };
-}
+// `items`: [{ title, abstract, category, keywords }]. Texts under the word
+// floor skip the model entirely (same threshold as before, just applied
+// per-item before the batched call goes out).
+async function summarizeBatch(items) {
+  const texts = items.map(({ title, abstract }) => abstract || title || "");
+  const longIdx = [];
+  const longTexts = [];
+  texts.forEach((text, i) => {
+    const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+    if (wordCount >= 15) {
+      longIdx.push(i);
+      longTexts.push(text);
+    }
+  });
+  const longResults = longTexts.length ? await extractiveSummaryBatch(longTexts) : [];
+  const perText = texts.map((text) => ({ summary: text, embedding: null }));
+  longIdx.forEach((i, j) => {
+    perText[i] = longResults[j];
+  });
 
-async function summarizeText(title, abstract, category, keywords) {
-  const text = abstract || title || "";
-  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
-
-  const { summary, embedding } =
-    wordCount < 15 ? { summary: text, embedding: null } : await extractiveSummary(text);
-
-  return {
-    summary,
-    embedding,
+  return items.map(({ title, abstract, category, keywords }, i) => ({
+    summary: perText[i].summary,
+    embedding: perText[i].embedding,
     layman: layman(abstract || title),
     difficulty: difficulty(abstract || title, category || ""),
     tags: tags(title, abstract || "", keywords || []),
-  };
+  }));
 }
 
 // --- persistent batch queue — the actual point of this rewrite. Lives at
@@ -174,29 +188,50 @@ async function runQueue() {
   running = true;
   while (true) {
     while (queue.length) {
-      const { paper, keywords } = queue.shift();
+      const chunk = queue.splice(0, BATCH_SIZE);
       broadcast({ type: "progress", status: currentStatus() });
+
+      const needSummary = chunk.filter(({ paper }) => !paper.summary && !summarizerBroken);
       try {
-        if (!paper.summary && !summarizerBroken) {
-          const result = await summarizeText(paper.title, paper.abstract, paper.primary_category, keywords);
-          Object.assign(paper, result);
+        if (needSummary.length) {
+          const results = await summarizeBatch(
+            needSummary.map(({ paper, keywords }) => ({
+              title: paper.title,
+              abstract: paper.abstract,
+              category: paper.primary_category,
+              keywords,
+            })),
+          );
+          needSummary.forEach(({ paper }, i) => Object.assign(paper, results[i]));
         }
-        if (!paper.embedding) {
-          paper.embedding = await embedText(paper.abstract || paper.title);
-        }
-        await putMany("papers", [paper]);
       } catch (err) {
         if (!summarizerBroken && looksSystemic(err)) {
           summarizerBroken = true;
           broadcast({ type: "progress", status: { message: "Local summarizer unavailable this session — showing abstracts instead." } });
         }
-        console.warn("models.worker: failed for", paper.arxiv_id, err);
+        console.warn("models.worker: batch summarize failed for", needSummary.map(({ paper }) => paper.arxiv_id), err);
       }
-      queueDone += 1;
+
+      const needEmbedding = chunk.filter(({ paper }) => !paper.embedding);
+      if (needEmbedding.length) {
+        try {
+          const embeddings = await embedBatch(needEmbedding.map(({ paper }) => paper.abstract || paper.title));
+          needEmbedding.forEach(({ paper }, i) => {
+            paper.embedding = embeddings[i];
+          });
+        } catch (err) {
+          console.warn("models.worker: batch embed failed for", needEmbedding.map(({ paper }) => paper.arxiv_id), err);
+        }
+      }
+
+      await putMany("papers", chunk.map(({ paper }) => paper));
+      queueDone += chunk.length;
       await persistQueueState();
-      const jobIds = waiters.get(paper.arxiv_id) || new Set();
-      waiters.delete(paper.arxiv_id);
-      for (const jobId of jobIds) finishJob(jobId);
+      for (const { paper } of chunk) {
+        const jobIds = waiters.get(paper.arxiv_id) || new Set();
+        waiters.delete(paper.arxiv_id);
+        for (const jobId of jobIds) finishJob(jobId);
+      }
     }
 
     const allPapers = await getAll("papers");
