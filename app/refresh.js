@@ -14,14 +14,11 @@ const pending = new Map();
 let activeOnStatus = null;
 let globalStatusCallback = null;
 
-// SharedWorker: this app is a multi-page site (no SPA router), and the
-// actual batch loop now lives inside models.worker.js itself, not in this
-// page's JS — so it keeps draining after this page navigates away, as long
-// as at least one tab of the app is still connected. See models.worker.js.
+// Dedicated Worker, not SharedWorker — see models.worker.js.
 function getWorker() {
   if (!worker) {
-    worker = new SharedWorker(new URL("./models.worker.js", import.meta.url), { type: "module" });
-    worker.port.onmessage = (event) => {
+    worker = new Worker(new URL("./models.worker.js", import.meta.url), { type: "module" });
+    worker.onmessage = (event) => {
       const { id, ok, result, error, type, status } = event.data;
       if (type === "progress") {
         if (activeOnStatus) activeOnStatus(status);
@@ -34,7 +31,6 @@ function getWorker() {
       if (ok) resolver.resolve(result);
       else resolver.reject(new Error(error));
     };
-    worker.port.start();
   }
   return worker;
 }
@@ -45,15 +41,11 @@ function callWorker(type, payload, onStatus) {
   activeOnStatus = onStatus || null;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    w.port.postMessage({ id, type, payload });
+    w.postMessage({ id, type, payload });
   });
 }
 
-// Pages call this once on load to keep their status line accurate even for
-// a batch they didn't start themselves (running on another tab, or started
-// on this page before a previous navigation). Immediately queries the
-// worker for whatever's running right now, then stays live for anything
-// that happens after.
+// Picks up a batch resumed from a previous navigation (see resumePendingQueue in models.worker.js).
 export function onRemoteSummaryStatus(callback) {
   globalStatusCallback = callback;
   callWorker("getStatus", {}, () => {}).then(callback).catch(() => {});
@@ -83,11 +75,7 @@ export async function fetchNewPapers(onStatus = () => {}, interests = null) {
   return added;
 }
 
-// Hands the given papers to the worker's persistent queue and resolves once
-// every one of them has been processed (summary + embedding), regardless of
-// whether other jobs from other pages/tabs are sharing the same queue. The
-// actual processing and IndexedDB writes happen in the worker, so it keeps
-// going even if this page navigates away before the promise resolves.
+// Hands papers to the worker's queue, resolves once each is processed.
 export async function summarizePapers(papers, interests, onStatus = () => {}) {
   const toProcess = papers.filter((p) => !p.summary || !p.embedding);
   if (!toProcess.length) {

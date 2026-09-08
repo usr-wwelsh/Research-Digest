@@ -33,11 +33,7 @@ export function selectSummarySentences(sentences, embeddings, docEmbedding, coun
     .map((s) => s.sentence);
 }
 
-// Splits every doc's sentences up front and records which ones need
-// sentence-level embeddings (more than `count` sentences), flattened into
-// one array so the caller can embed them in a single batched model call
-// instead of one per doc. Pure and model-free — pairs with
-// assembleExtractiveBatch once the caller has run the actual embeddings.
+// Flattens sentences needing embeddings across all docs into one array (pairs with assembleExtractiveBatch).
 export function planExtractiveBatch(texts, count) {
   const perDocSentences = texts.map(splitSentences);
   const flatSentences = [];
@@ -50,10 +46,7 @@ export function planExtractiveBatch(texts, count) {
   return { perDocSentences, flatSentences, spans };
 }
 
-// Pairs a planExtractiveBatch() plan back up with the batched embeddings
-// (docEmbeddings[i] per text, flatEmbeddings sliced per span) to produce the
-// final per-doc summaries — kept separate from the embedding calls so this
-// stays pure and testable without a model.
+// Pairs a planExtractiveBatch() plan with the batched embeddings to produce final per-doc summaries.
 export function assembleExtractiveBatch(texts, plan, docEmbeddings, flatEmbeddings, count) {
   const { perDocSentences, spans } = plan;
   return texts.map((text, i) => {

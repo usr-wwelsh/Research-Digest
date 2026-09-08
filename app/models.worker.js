@@ -1,14 +1,4 @@
-// In-browser summarization + embedding via transformers.js, off the UI
-// thread. Summarization is extractive (extractive.js), so the one DistilBERT
-// embedder does both jobs — no separate generative model.
-//
-// SharedWorker, and it owns the batch queue itself (not just the model):
-// this app is a multi-page site (no SPA router), so a loop driven by a
-// page's own JS dies the instant that page navigates away. Papers are
-// enqueued here, processed and written to IndexedDB from inside the worker,
-// so a batch keeps draining regardless of which page (if any) is open —
-// as long as at least one tab of the app is still connected, the queue
-// keeps moving. See refresh.js for the page-side API.
+// Dedicated Worker, not SharedWorker — SharedWorker never reports crossOriginIsolated=true here, which silently kills WASM threading.
 import { pipeline, env } from "./vendor/transformers.min.js";
 import { difficulty, layman, tags } from "./heuristics.js";
 import { planExtractiveBatch, assembleExtractiveBatch } from "./extractive.js";
@@ -16,44 +6,31 @@ import { getAll, putMany, getSetting, setSetting, del } from "./db.js";
 import { computeRelated } from "./relate.js";
 import { computeBatchSize } from "./batch-size.js";
 
-// Self-hosted, not transformers.js's jsdelivr default (see
-// scripts/fetch_vendor_assets.sh). Must be the exact asyncify mjs/wasm pair:
-// a bare path prefix falls back to onnxruntime-web's plain threaded build,
-// which hangs indefinitely post-download in Firefox with no console error.
+// Self-hosted asyncify build (see scripts/fetch_vendor_assets.sh) — the plain threaded build hangs post-download in Firefox.
 env.backends.onnx.wasm.wasmPaths = {
   mjs: "/vendor/ort/ort-wasm-simd-threaded.asyncify.mjs",
   wasm: "/vendor/ort/ort-wasm-simd-threaded.asyncify.wasm",
 };
 env.allowLocalModels = false;
-// COI is enabled (see commit a20c1c8) specifically so this can thread —
-// the self-hosted asyncify build above doesn't hit the Firefox hang that a
-// plain threaded build would, so it's safe to actually use the cores.
 env.backends.onnx.wasm.numThreads = Math.max(1, Math.min(self.navigator?.hardwareConcurrency || 1, 4));
 
 const EMBEDDING_MODEL = "Xenova/distilbert-base-uncased";
 const EMBEDDER_DTYPE = "q8";
 const SUMMARY_SENTENCE_COUNT = 2;
-// How many papers get summarized/embedded per model call — folding several
-// papers' texts into one tokenize+forward pass amortizes the fixed
-// per-call overhead (see embedBatch below), which dominates at this text
-// length. Sized off deviceMemory so a bigger batch's extra padding cost
-// doesn't blow the memory budget on a cheap phone.
-const BATCH_SIZE = computeBatchSize(self.navigator?.deviceMemory);
+const BATCH_SIZE = computeBatchSize(self.navigator?.deviceMemory); // papers per model call, sized off deviceMemory
 
-const ports = new Set();
-
-function broadcast(message) {
-  for (const port of ports) port.postMessage(message);
+function post(message) {
+  self.postMessage(message);
 }
 
 let embedderPromise = null;
 
 function reportProgress(data) {
   if (data.status === "initiate") {
-    broadcast({ type: "progress", status: { message: `Loading model: ${data.file}…` } });
+    post({ type: "progress", status: { message: `Loading model: ${data.file}…` } });
   } else if (data.status === "progress") {
     const pct = data.progress != null ? ` ${Math.round(data.progress)}%` : "";
-    broadcast({ type: "progress", status: { message: `Loading model: ${data.file}${pct}…` } });
+    post({ type: "progress", status: { message: `Loading model: ${data.file}${pct}…` } });
   }
 }
 
@@ -77,13 +54,7 @@ async function embedBatch(texts) {
   return out.tolist();
 }
 
-// Centroid extractive summaries for a whole chunk of docs at once: one
-// batched call for the doc embeddings, one for every sentence across every
-// doc that needs sentence-level scoring (planExtractiveBatch/
-// assembleExtractiveBatch in extractive.js do the pure grouping/pairing).
-// Kept separate from each other — the tokenizer pads every item in a batch
-// to its longest member, so mixing docs + sentences would pad each short
-// sentence out to document length and erase the win.
+// Batched doc + sentence embeddings for a whole chunk at once (extractive.js does the pure grouping/pairing).
 async function extractiveSummaryBatch(texts) {
   const plan = planExtractiveBatch(texts, SUMMARY_SENTENCE_COUNT);
   const docEmbeddings = await embedBatch(texts);
@@ -91,9 +62,7 @@ async function extractiveSummaryBatch(texts) {
   return assembleExtractiveBatch(texts, plan, docEmbeddings, flatEmbeddings, SUMMARY_SENTENCE_COUNT);
 }
 
-// `items`: [{ title, abstract, category, keywords }]. Texts under the word
-// floor skip the model entirely (same threshold as before, just applied
-// per-item before the batched call goes out).
+// items: [{ title, abstract, category, keywords }]
 async function summarizeBatch(items) {
   const texts = items.map(({ title, abstract }) => abstract || title || "");
   const longIdx = [];
@@ -120,16 +89,10 @@ async function summarizeBatch(items) {
   }));
 }
 
-// --- persistent batch queue — the actual point of this rewrite. Lives at
-// worker scope, so it keeps draining across page navigations. Multiple
-// jobs (from the same or different pages/tabs) share one FIFO queue and
-// one running total; each job's caller is replied to individually, once
-// every paper it submitted has been processed. ---
-
+// One FIFO queue shared by any overlapping summarizeBatch calls from this page.
 const queue = []; // { paper, keywords } — at most one entry per arxiv_id
 const waiters = new Map(); // arxiv_id -> Set of jobIds waiting on that paper (queued OR being processed right now)
 const jobRemaining = new Map(); // jobId -> count of distinct papers that job is still waiting on
-const jobPorts = new Map(); // jobId -> port to reply to on that job's completion
 let queueTotal = 0;
 let queueDone = 0;
 let running = false;
@@ -148,13 +111,7 @@ function currentStatus() {
   return { message: `Summarizing ${queueDone + 1}/${queueTotal}…`, done: queueDone, total: queueTotal };
 }
 
-// This is an MPA, not an SPA (see refresh.js) — every nav is a full page
-// unload/reload, so there's a real gap where zero ports are connected to
-// this SharedWorker. Browsers are free to kill a SharedWorker as soon as
-// its client count hits zero, which used to silently drop the whole queue
-// mid-batch. Persisting {total, done, pending} to the settings store lets a
-// freshly-booted worker instance pick the batch back up (see
-// resumePendingQueue) instead of the next page quietly starting over.
+// Persisted so resumePendingQueue can pick the batch back up after this worker dies on page nav.
 const QUEUE_STATE_KEY = "summaryQueueState";
 
 async function persistQueueState() {
@@ -173,9 +130,7 @@ function finishJob(jobId) {
     return;
   }
   jobRemaining.delete(jobId);
-  const port = jobPorts.get(jobId);
-  jobPorts.delete(jobId);
-  if (port) port.postMessage({ id: jobId, ok: true, result: { processed: queueDone, total: queueTotal } });
+  self.postMessage({ id: jobId, ok: true, result: { processed: queueDone, total: queueTotal } });
 }
 
 // Outer loop, not a single pass: a new summarizeBatch message can arrive
@@ -189,7 +144,7 @@ async function runQueue() {
   while (true) {
     while (queue.length) {
       const chunk = queue.splice(0, BATCH_SIZE);
-      broadcast({ type: "progress", status: currentStatus() });
+      post({ type: "progress", status: currentStatus() });
 
       const needSummary = chunk.filter(({ paper }) => !paper.summary && !summarizerBroken);
       try {
@@ -207,7 +162,7 @@ async function runQueue() {
       } catch (err) {
         if (!summarizerBroken && looksSystemic(err)) {
           summarizerBroken = true;
-          broadcast({ type: "progress", status: { message: "Local summarizer unavailable this session — showing abstracts instead." } });
+          post({ type: "progress", status: { message: "Local summarizer unavailable this session — showing abstracts instead." } });
         }
         console.warn("models.worker: batch summarize failed for", needSummary.map(({ paper }) => paper.arxiv_id), err);
       }
@@ -246,19 +201,18 @@ async function runQueue() {
   running = false;
   queueTotal = 0;
   queueDone = 0;
-  broadcast({ type: "progress", status: null });
+  post({ type: "progress", status: null });
 }
 
 // Dedupes against whatever's already queued or actively being processed —
 // two jobs (e.g. a batch you started, then re-triggered before it finished)
 // asking for the same paper share one actual processing pass, not two.
-function enqueueBatch(jobId, papers, interests, port) {
+function enqueueBatch(jobId, papers, interests) {
   const toProcess = papers.filter((p) => !p.summary || !p.embedding);
   if (!toProcess.length) {
-    port.postMessage({ id: jobId, ok: true, result: { processed: 0, total: 0 } });
+    self.postMessage({ id: jobId, ok: true, result: { processed: 0, total: 0 } });
     return;
   }
-  jobPorts.set(jobId, port);
   let waitingOn = 0;
   for (const paper of toProcess) {
     waitingOn += 1;
@@ -293,16 +247,12 @@ function cancelAll() {
   }
   for (const jobId of affectedJobIds) {
     jobRemaining.delete(jobId);
-    const port = jobPorts.get(jobId);
-    jobPorts.delete(jobId);
-    if (port) port.postMessage({ id: jobId, ok: true, result: { processed: queueDone, total: queueTotal, cancelled: true } });
+    self.postMessage({ id: jobId, ok: true, result: { processed: queueDone, total: queueTotal, cancelled: true } });
   }
   persistQueueState();
-  // Without this, the status line just sits frozen on the last
-  // "Summarizing N/M…" until the in-flight paper finishes on its own —
-  // which can be a long wait during model load. Give immediate feedback
-  // that the click landed even though that one paper can't be interrupted.
-  broadcast({ type: "progress", status: running ? { message: "Cancelling…" } : null });
+  // Immediate feedback that the click landed — the in-flight paper can't be
+  // interrupted, so the status line would otherwise sit frozen until it's done.
+  post({ type: "progress", status: running ? { message: "Cancelling…" } : null });
 }
 
 // Runs once, the moment this worker instance boots (including after the
@@ -331,26 +281,18 @@ async function resumePendingQueue() {
   else await del("settings", QUEUE_STATE_KEY).catch(() => {});
 }
 
-// Every connection's first message waits on this so a page that asks
-// getStatus right after this worker boots gets the resumed total, not a
-// blank slate while resume is still mid-flight.
-const resumeReady = resumePendingQueue();
+const resumeReady = resumePendingQueue(); // a getStatus right after boot waits on this for the resumed total
 
-self.onconnect = (event) => {
-  const port = event.ports[0];
-  ports.add(port);
-  port.onmessage = (event) => {
-    const { id, type, payload } = event.data || {};
-    resumeReady.then(() => {
-      if (type === "summarizeBatch") {
-        enqueueBatch(id, payload.papers, payload.interests, port);
-      } else if (type === "getStatus") {
-        port.postMessage({ id, ok: true, result: currentStatus() });
-      } else if (type === "cancel") {
-        cancelAll();
-        port.postMessage({ id, ok: true, result: { cancelled: true } });
-      }
-    });
-  };
-  port.start();
+self.onmessage = (event) => {
+  const { id, type, payload } = event.data || {};
+  resumeReady.then(() => {
+    if (type === "summarizeBatch") {
+      enqueueBatch(id, payload.papers, payload.interests);
+    } else if (type === "getStatus") {
+      self.postMessage({ id, ok: true, result: currentStatus() });
+    } else if (type === "cancel") {
+      cancelAll();
+      self.postMessage({ id, ok: true, result: { cancelled: true } });
+    }
+  });
 };
