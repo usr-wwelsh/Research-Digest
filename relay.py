@@ -139,7 +139,8 @@ def fetch_upstream(url):
 
     An upstream non-2xx (429, 5xx, ...) is returned as a normal result, not
     raised — the caller passes that status straight through to the client.
-    Only a genuine connection failure raises urllib.error.URLError.
+    A genuine connection failure raises urllib.error.URLError; a stall while
+    reading the body raises TimeoutError, which urllib does not wrap.
     """
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
@@ -189,6 +190,14 @@ class RelayHandler(BaseHTTPRequestHandler):
 
         try:
             body, status, content_type = fetch_upstream(upstream_url)
+        except TimeoutError:
+            # Not caught by the URLError arm below: urlopen wraps a
+            # connect-phase timeout, but resp.read() stalling raises this
+            # bare. Uncaught it reached handle_one_request, which closed the
+            # socket without a response — the client got a network error
+            # carrying no status, so nothing could be reported to the user.
+            self._send_json(504, {"error": "upstream timed out"})
+            return
         except urllib.error.URLError:
             self._send_json(502, {"error": "upstream unreachable"})
             return

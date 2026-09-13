@@ -116,6 +116,20 @@ def test_upstream_connection_failure_returns_502(server, monkeypatch):
     assert status == 502
 
 
+def test_upstream_read_timeout_returns_504_not_a_dropped_connection(server, monkeypatch):
+    # urlopen wraps a connect-phase timeout in URLError, but a stall while
+    # reading the body raises TimeoutError straight out of resp.read(). That
+    # used to escape do_GET entirely: the handler logged "Request timed out"
+    # and closed the socket without ever sending a response, so the browser
+    # saw a bare network error with no status to report.
+    def stall(url):
+        raise TimeoutError("The read operation timed out")
+    monkeypatch.setattr(relay, "fetch_upstream", stall)
+    status, headers, _ = http_get(server, "/relay/arxiv?search_query=x")
+    assert status == 504
+    assert headers["Access-Control-Allow-Origin"] == relay.ALLOWED_ORIGIN
+
+
 def test_rate_limit_returns_429_once_bucket_is_exhausted(server, monkeypatch):
     monkeypatch.setattr(relay, "fetch_upstream", lambda url: (b"{}", 200, "application/json"))
     monkeypatch.setattr(relay, "_BUCKETS", {
