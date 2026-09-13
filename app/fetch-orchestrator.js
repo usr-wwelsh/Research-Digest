@@ -72,12 +72,16 @@ async function fetchOneInterest(interest) {
   const effectiveKeywords = [...(interest.keywords || []), ...boost];
 
   const candidates = [];
+  const failures = [];
   for (const sourceName of sources) {
     const mod = SOURCE_MODULES[sourceName];
     if (!mod) continue;
     try {
       candidates.push(...(await mod.fetchForInterest(interest)));
     } catch (err) {
+      // Reported up to the caller, not just logged: a source that 429s looks
+      // exactly like a quiet day otherwise.
+      failures.push({ source: sourceName, interest: interest.name, status: err && err.status });
       console.warn(`fetch-orchestrator: ${sourceName} failed for "${interest.name}"`, err);
     }
   }
@@ -87,16 +91,24 @@ async function fetchOneInterest(interest) {
 
   const toWrite = [...insert, ...merge];
   if (toWrite.length) await putMany("papers", toWrite);
-  return insert.length;
+  return { added: insert.length, failures };
 }
 
-export async function runFetchCycle(interests) {
-  let total = 0;
-  for (const interest of interests.filter((i) => i.enabled !== false)) {
-    total += await fetchOneInterest(interest);
+// onProgress fires per interest: sources are paced at ~1/sec to stay inside
+// relay.py's bucket, so a full cycle is tens of seconds and a single static
+// "Fetching new papers…" reads as a hang.
+export async function runFetchCycle(interests, onProgress = () => {}) {
+  const enabled = interests.filter((i) => i.enabled !== false);
+  let added = 0;
+  const failures = [];
+  for (const [i, interest] of enabled.entries()) {
+    onProgress({ message: `Fetching ${interest.name}…`, done: i, total: enabled.length });
+    const result = await fetchOneInterest(interest);
+    added += result.added;
+    failures.push(...result.failures);
   }
   await setSetting("last_fetch_at", new Date().toISOString());
-  return total;
+  return { added, failures };
 }
 
 export async function isStale(maxAgeMs = DEFAULT_STALE_MS) {

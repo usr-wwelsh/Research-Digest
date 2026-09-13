@@ -48,3 +48,41 @@ test("every request carries an abort signal so a hung relay cannot stall the cyc
     () => relayText("/relay/arxiv", "arxiv", fast));
   assert.ok(seen && seen.signal, "expected an AbortSignal on the request");
 });
+
+test("a 429 carries the server's Retry-After hint into the retry policy", async () => {
+  const waits = [];
+  await withFakeFetch(
+    async () => ({ ok: false, status: 429, headers: { get: (h) => (h === "Retry-After" ? "1" : null) } }),
+    async () => {
+      await assert.rejects(relayText("/relay/arxiv", "arxiv", {
+        retries: 1,
+        minIntervalMs: 0,
+        sleep: async (ms) => { waits.push(ms); },
+      }));
+    },
+  );
+  assert.deepEqual(waits, [1000]);
+});
+
+test("back-to-back calls to one source are spaced to respect the relay's bucket", async () => {
+  const waits = [];
+  let clock = 0;
+  const opts = { minIntervalMs: 1000, now: () => clock, sleep: async (ms) => { waits.push(ms); }, retries: 0 };
+  await withFakeFetch(async () => ok("x"), async () => {
+    await relayText("/relay/paced-a", "paced-a", opts);
+    await relayText("/relay/paced-a", "paced-a", opts);
+    await relayText("/relay/paced-a", "paced-a", opts);
+  });
+  assert.deepEqual(waits, [1000, 2000], "the first goes out at once, later ones queue behind it");
+});
+
+test("pacing is per source, so a slow source does not hold up the others", async () => {
+  const waits = [];
+  let clock = 0;
+  const opts = { minIntervalMs: 1000, now: () => clock, sleep: async (ms) => { waits.push(ms); }, retries: 0 };
+  await withFakeFetch(async () => ok("x"), async () => {
+    await relayText("/relay/paced-b", "paced-b", opts);
+    await relayText("/relay/paced-c", "paced-c", opts);
+  });
+  assert.deepEqual(waits, [], "different sources have independent budgets");
+});

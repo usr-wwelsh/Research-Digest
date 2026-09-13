@@ -227,11 +227,11 @@ export function progressPercent(done, total) {
 
 // status: a plain string (most callers — fetchNewPapers, "Saved.", error
 // messages), null/undefined (clear), or {message, done, total} (worker
-// summarize progress, see models.worker.js's currentStatus()) which also
-// renders a progress bar. Worker-driven object statuses are the only ones
-// that can show a Cancel button (onCancel) — there's currently no way to
-// abort an in-flight arXiv fetch, so string statuses never get one even if
-// a caller passes onCancel.
+// summarize progress, or fetch-orchestrator's per-interest progress) which
+// also renders a progress bar. A Cancel button appears only when the caller
+// passes onCancel alongside an object status — the fetch cycle emits object
+// statuses too but passes no onCancel, since an in-flight arXiv fetch still
+// can't be aborted.
 export function setStatus(status, onCancel = null) {
   const el = document.getElementById("status-line");
   if (!el) return;
@@ -256,4 +256,15 @@ export function setStatus(status, onCancel = null) {
   if (cancelable) {
     el.querySelector(".status-cancel-btn").addEventListener("click", onCancel, { once: true });
   }
+}
+
+// Status line after a fetch cycle that partly failed. Source errors used to
+// go only to console.warn, so a rate-limited run looked identical to a run
+// that genuinely found nothing new.
+export function fetchSummaryMessage(added, failures) {
+  if (!failures || !failures.length) return null;
+  const sources = [...new Set(failures.map((f) => f.source))].sort().join(", ");
+  const cause = failures.every((f) => f.status === 429) ? "rate limited" : "unavailable";
+  if (!added) return `No new papers — ${sources} ${cause}.`;
+  return `Added ${added} paper${added === 1 ? "" : "s"} — ${sources} ${cause}, some interests skipped.`;
 }

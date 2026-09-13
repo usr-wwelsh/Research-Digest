@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { escapeHtml, paperCardHtml, navHtml, interestRowHtml, progressPercent, corpusStats, corpusStatsHtml, slugify } from "../ui-common.js";
+import { escapeHtml, paperCardHtml, navHtml, interestRowHtml, progressPercent, corpusStats, corpusStatsHtml, slugify, fetchSummaryMessage } from "../ui-common.js";
 
 test("escapeHtml escapes all five special characters", () => {
   assert.equal(escapeHtml(`<a href="x">'&'</a>`), "&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;");
@@ -145,4 +145,52 @@ test("navHtml marks the active page's link", () => {
   const html = navHtml("search.html");
   assert.match(html, /href="search\.html" class="active"/);
   assert.ok(!html.includes('href="digest.html" class="active"'));
+});
+
+// --- fetchSummaryMessage: what the status line says after a partial fetch ---
+
+test("a fetch with no failures says nothing extra", () => {
+  assert.equal(fetchSummaryMessage(12, []), null);
+});
+
+test("a partial fetch names the sources that failed and keeps the count", () => {
+  const msg = fetchSummaryMessage(7, [{ source: "arxiv", status: 502 }]);
+  assert.match(msg, /7 papers/);
+  assert.match(msg, /arxiv/);
+});
+
+test("a fetch that got nothing says so instead of reporting a count", () => {
+  const msg = fetchSummaryMessage(0, [{ source: "arxiv", status: 502 }]);
+  assert.match(msg, /No new papers/);
+  assert.doesNotMatch(msg, /0 papers/);
+});
+
+test("an all-rate-limited fetch says so, since waiting is the fix", () => {
+  const msg = fetchSummaryMessage(0, [
+    { source: "arxiv", status: 429 },
+    { source: "arxiv", status: 429 },
+  ]);
+  assert.match(msg, /rate limited/);
+});
+
+test("a mixed failure does not claim rate limiting", () => {
+  const msg = fetchSummaryMessage(0, [
+    { source: "arxiv", status: 429 },
+    { source: "openreview", status: 502 },
+  ]);
+  assert.doesNotMatch(msg, /rate limited/);
+  assert.match(msg, /arxiv, openreview/);
+});
+
+test("one source failing for several interests is named once", () => {
+  const msg = fetchSummaryMessage(3, [
+    { source: "arxiv", status: 429 },
+    { source: "arxiv", status: 429 },
+    { source: "arxiv", status: 429 },
+  ]);
+  assert.equal(msg.match(/arxiv/g).length, 1);
+});
+
+test("a single paper is not pluralised", () => {
+  assert.match(fetchSummaryMessage(1, [{ source: "arxiv", status: 502 }]), /1 paper\b/);
 });

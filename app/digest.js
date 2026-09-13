@@ -4,7 +4,7 @@
 // same "load more" affordance runs a full fetch cycle to pull a fresh batch
 // before revealing further.
 import { getAll } from "./db.js";
-import { navHtml, paperCardHtml, wireSaveButtons, ensureSeedImported, getSavedIdSet, setStatus } from "./ui-common.js";
+import { navHtml, paperCardHtml, wireSaveButtons, ensureSeedImported, getSavedIdSet, setStatus, fetchSummaryMessage } from "./ui-common.js";
 import { fetchNewPapers, summarizePapers, getInterests, onRemoteSummaryStatus, cancelSummarize } from "./refresh.js";
 
 document.getElementById("nav").innerHTML = navHtml("digest.html");
@@ -120,16 +120,21 @@ papersEl.addEventListener("click", async (event) => {
 
   fetchingMore = true;
   renderList(filtered, filtered.slice(0, revealed));
+  // Set after refreshView(), not inside the catch: refreshView summarizes the
+  // newly revealed papers and clears the status line on its way out.
+  let notice = null;
   try {
-    await fetchNewPapers(setStatus);
+    const { added, failures } = await fetchNewPapers(setStatus);
+    notice = fetchSummaryMessage(added, failures);
     allPapers = await getAll("papers");
     revealed += PAGE_SIZE;
   } catch (err) {
     console.error("digest: batch fetch failed", err);
-    setStatus("Fetch failed — check your connection.");
+    notice = "Fetch failed — check your connection.";
   } finally {
     fetchingMore = false;
     await refreshView();
+    if (notice) setStatus(notice);
   }
 });
 

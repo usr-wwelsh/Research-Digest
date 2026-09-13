@@ -34,10 +34,9 @@ export async function getInterests() {
 export async function fetchNewPapers(onStatus = () => {}, interests = null) {
   onStatus("Checking interests…");
   const list = interests || (await getInterests()).filter((i) => i.enabled !== false);
-  onStatus("Fetching new papers…");
-  const added = await runFetchCycle(list);
+  const result = await runFetchCycle(list, onStatus);
   onStatus(null);
-  return added;
+  return result;
 }
 
 // Hands papers to the worker's queue, resolves once each is processed.

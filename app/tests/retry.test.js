@@ -76,3 +76,23 @@ test("jitter keeps the delay inside half the nominal backoff", () => {
   assert.equal(high, 400);
   assert.equal(low, 200);
 });
+
+test("a Retry-After hint from the server overrides the computed backoff", async () => {
+  const waits = [];
+  const err = httpError(429);
+  err.retryAfter = "2";
+  await assert.rejects(
+    withRetry(async () => { throw err; }, { retries: 1, baseMs: 10, sleep: async (ms) => { waits.push(ms); } }),
+  );
+  assert.deepEqual(waits, [2000]);
+});
+
+test("an unparseable Retry-After falls back to the computed backoff", async () => {
+  const waits = [];
+  const err = httpError(429);
+  err.retryAfter = "Wed, 21 Oct 2026 07:28:00 GMT";
+  await assert.rejects(
+    withRetry(async () => { throw err; }, { retries: 1, baseMs: 100, random: () => 1, sleep: async (ms) => { waits.push(ms); } }),
+  );
+  assert.deepEqual(waits, [100]);
+});

@@ -3,7 +3,7 @@
 // selected). Built for reading the existing local corpus with no network,
 // e.g. while the relay/homelab is unreachable.
 import { getAll } from "./db.js";
-import { navHtml, paperCardHtml, escapeHtml, wireSaveButtons, getSavedIdSet, setStatus, corpusStats, corpusStatsHtml } from "./ui-common.js";
+import { navHtml, paperCardHtml, escapeHtml, wireSaveButtons, getSavedIdSet, setStatus, corpusStats, corpusStatsHtml, fetchSummaryMessage } from "./ui-common.js";
 import { fetchNewPapers, summarizePapers, getInterests, onRemoteSummaryStatus, cancelSummarize } from "./refresh.js";
 
 document.getElementById("nav").innerHTML = navHtml("library.html");
@@ -141,10 +141,12 @@ summarizeBtn.addEventListener("click", async () => {
 fetchBtn.addEventListener("click", async () => {
   fetchBtn.disabled = true;
   try {
-    await fetchNewPapers(setStatus);
+    const { added, failures } = await fetchNewPapers(setStatus);
     allPapers = await getAll("papers");
     refreshFilterOptions();
     render();
+    const notice = fetchSummaryMessage(added, failures);
+    if (notice) setStatus(notice);
   } catch (err) {
     console.error("library: fetch failed", err);
     setStatus("Fetch failed — check your connection.");
