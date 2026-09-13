@@ -1,6 +1,8 @@
 // OpenReview source adapter. API v2 notes are public/keyless for read
 // access at this volume (confirmed); content fields may be raw values or
 // {value: ...} wrapped depending on the invitation schema, so unwrap both.
+import { relayJson } from "./relay.js";
+
 const RELAY_BASE = "/relay/openreview";
 
 function fieldValue(v) {
@@ -43,9 +45,7 @@ export function parseResponse(json) {
 
 export async function search(query, limit = 20) {
   const params = new URLSearchParams({ term: query, limit: String(limit) });
-  const res = await fetch(`${RELAY_BASE}?${params}`);
-  if (!res.ok) throw new Error(`openreview relay error: ${res.status}`);
-  return parseResponse(await res.json());
+  return parseResponse(await relayJson(`${RELAY_BASE}?${params}`, "openreview"));
 }
 
 export async function fetchForInterest(interest, { limit = 20 } = {}) {

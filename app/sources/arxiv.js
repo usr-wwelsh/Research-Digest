@@ -1,6 +1,8 @@
 // arXiv source adapter. All calls go through relay.py — arXiv sends no
 // Access-Control-Allow-Origin header (confirmed by direct testing), so a
 // browser cannot fetch export.arxiv.org directly.
+import { relayText } from "./relay.js";
+
 const RELAY_BASE = "/relay/arxiv";
 const NS = { atom: "http://www.w3.org/2005/Atom", arxiv: "http://arxiv.org/schemas/atom" };
 
@@ -100,9 +102,7 @@ export async function fetchForInterest(interest, { recentDays = 7, maxResults = 
     sortBy: "submittedDate",
     sortOrder: "descending",
   });
-  const res = await fetch(`${RELAY_BASE}?${params}`);
-  if (!res.ok) throw new Error(`arxiv relay error: ${res.status}`);
-  return parseFeed(await res.text());
+  return parseFeed(await relayText(`${RELAY_BASE}?${params}`, "arxiv"));
 }
 
 export async function search(query, limit = 20) {
@@ -113,7 +113,5 @@ export async function search(query, limit = 20) {
     sortBy: "relevance",
     sortOrder: "descending",
   });
-  const res = await fetch(`${RELAY_BASE}?${params}`);
-  if (!res.ok) throw new Error(`arxiv relay error: ${res.status}`);
-  return parseFeed(await res.text());
+  return parseFeed(await relayText(`${RELAY_BASE}?${params}`, "arxiv"));
 }

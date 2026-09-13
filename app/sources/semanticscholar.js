@@ -1,6 +1,8 @@
 // Semantic Scholar source adapter. Keyless at this volume (confirmed).
 // Routed through relay.py like every other source, uniformly — not because
 // S2's own CORS support is known either way, but to keep one code path.
+import { relayJson } from "./relay.js";
+
 const RELAY_BASE = "/relay/semanticscholar";
 const FIELDS = "paperId,title,abstract,authors,venue,year,publicationDate,externalIds,openAccessPdf";
 
@@ -31,9 +33,7 @@ export function parseResponse(json) {
 
 export async function search(query, limit = 20) {
   const params = new URLSearchParams({ query, limit: String(limit), fields: FIELDS });
-  const res = await fetch(`${RELAY_BASE}?${params}`);
-  if (!res.ok) throw new Error(`semanticscholar relay error: ${res.status}`);
-  return parseResponse(await res.json());
+  return parseResponse(await relayJson(`${RELAY_BASE}?${params}`, "semanticscholar"));
 }
 
 export async function fetchForInterest(interest, { limit = 20 } = {}) {
