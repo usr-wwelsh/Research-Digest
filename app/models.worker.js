@@ -141,67 +141,89 @@ function finishJob(jobId) {
 async function runQueue() {
   if (running) return;
   running = true;
-  while (true) {
-    while (queue.length) {
-      const chunk = queue.splice(0, BATCH_SIZE);
-      post({ type: "progress", status: currentStatus() });
+  try {
+    while (true) {
+      while (queue.length) {
+        const chunk = queue.splice(0, BATCH_SIZE);
+        post({ type: "progress", status: currentStatus() });
 
-      const needSummary = chunk.filter(({ paper }) => !paper.summary && !summarizerBroken);
-      try {
-        if (needSummary.length) {
-          const results = await summarizeBatch(
-            needSummary.map(({ paper, keywords }) => ({
-              title: paper.title,
-              abstract: paper.abstract,
-              category: paper.primary_category,
-              keywords,
-            })),
-          );
-          needSummary.forEach(({ paper }, i) => Object.assign(paper, results[i]));
-        }
-      } catch (err) {
-        if (!summarizerBroken && looksSystemic(err)) {
-          summarizerBroken = true;
-          post({ type: "progress", status: { message: "Local summarizer unavailable this session — showing abstracts instead." } });
-        }
-        console.warn("models.worker: batch summarize failed for", needSummary.map(({ paper }) => paper.arxiv_id), err);
-      }
-
-      const needEmbedding = chunk.filter(({ paper }) => !paper.embedding);
-      if (needEmbedding.length) {
+        const needSummary = chunk.filter(({ paper }) => !paper.summary && !summarizerBroken);
         try {
-          const embeddings = await embedBatch(needEmbedding.map(({ paper }) => paper.abstract || paper.title));
-          needEmbedding.forEach(({ paper }, i) => {
-            paper.embedding = embeddings[i];
-          });
+          if (needSummary.length) {
+            const results = await summarizeBatch(
+              needSummary.map(({ paper, keywords }) => ({
+                title: paper.title,
+                abstract: paper.abstract,
+                category: paper.primary_category,
+                keywords,
+              })),
+            );
+            needSummary.forEach(({ paper }, i) => Object.assign(paper, results[i]));
+          }
         } catch (err) {
-          console.warn("models.worker: batch embed failed for", needEmbedding.map(({ paper }) => paper.arxiv_id), err);
+          if (!summarizerBroken && looksSystemic(err)) {
+            summarizerBroken = true;
+            post({ type: "progress", status: { message: "Local summarizer unavailable this session — showing abstracts instead." } });
+          }
+          console.warn("models.worker: batch summarize failed for", needSummary.map(({ paper }) => paper.arxiv_id), err);
+        }
+
+        const needEmbedding = chunk.filter(({ paper }) => !paper.embedding);
+        if (needEmbedding.length) {
+          try {
+            const embeddings = await embedBatch(needEmbedding.map(({ paper }) => paper.abstract || paper.title));
+            needEmbedding.forEach(({ paper }, i) => {
+              paper.embedding = embeddings[i];
+            });
+          } catch (err) {
+            console.warn("models.worker: batch embed failed for", needEmbedding.map(({ paper }) => paper.arxiv_id), err);
+          }
+        }
+
+        await putMany("papers", chunk.map(({ paper }) => paper));
+        queueDone += chunk.length;
+        await persistQueueState();
+        for (const { paper } of chunk) {
+          const jobIds = waiters.get(paper.arxiv_id) || new Set();
+          waiters.delete(paper.arxiv_id);
+          for (const jobId of jobIds) finishJob(jobId);
         }
       }
 
-      await putMany("papers", chunk.map(({ paper }) => paper));
-      queueDone += chunk.length;
-      await persistQueueState();
-      for (const { paper } of chunk) {
-        const jobIds = waiters.get(paper.arxiv_id) || new Set();
-        waiters.delete(paper.arxiv_id);
-        for (const jobId of jobIds) finishJob(jobId);
-      }
+      const allPapers = await getAll("papers");
+      if (queue.length) continue;
+      const related = computeRelated(allPapers);
+      for (const p of allPapers) p.related = related[p.arxiv_id] || p.related || [];
+      await putMany("papers", allPapers);
+      if (queue.length) continue;
+      break;
     }
-
-    const allPapers = await getAll("papers");
-    if (queue.length) continue;
-    const related = computeRelated(allPapers);
-    for (const p of allPapers) p.related = related[p.arxiv_id] || p.related || [];
-    await putMany("papers", allPapers);
-    if (queue.length) continue;
-    break;
+  } catch (err) {
+    // Without this the guard above stays true for the life of the worker and
+    // every later batch is silently dropped, its callers waiting forever.
+    console.error("models.worker: queue aborted", err);
+    failAllJobs(err);
+  } finally {
+    running = false;
+    queueTotal = 0;
+    queueDone = 0;
+    post({ type: "progress", status: null });
   }
+}
 
-  running = false;
-  queueTotal = 0;
-  queueDone = 0;
-  post({ type: "progress", status: null });
+// A queue abort is systemic (IndexedDB gone, quota exhausted), not per-paper:
+// tell every waiting job rather than leaving it pending, and drop the work so
+// the next batch starts clean. The persisted state is left alone on purpose —
+// a reload retries it.
+function failAllJobs(err) {
+  const jobIds = new Set(jobRemaining.keys());
+  for (const ids of waiters.values()) for (const id of ids) jobIds.add(id);
+  queue.length = 0;
+  waiters.clear();
+  jobRemaining.clear();
+  for (const jobId of jobIds) {
+    self.postMessage({ id: jobId, ok: false, error: String((err && err.message) || err) });
+  }
 }
 
 // Dedupes against whatever's already queued or actively being processed —
@@ -281,18 +303,26 @@ async function resumePendingQueue() {
   else await del("settings", QUEUE_STATE_KEY).catch(() => {});
 }
 
-const resumeReady = resumePendingQueue(); // a getStatus right after boot waits on this for the resumed total
+// a getStatus right after boot waits on this for the resumed total; a failed
+// resume (IndexedDB blocked in a private window) must not mute onmessage.
+const resumeReady = resumePendingQueue().catch((err) => {
+  console.warn("models.worker: could not resume a pending batch", err);
+});
 
 self.onmessage = (event) => {
   const { id, type, payload } = event.data || {};
-  resumeReady.then(() => {
-    if (type === "summarizeBatch") {
-      enqueueBatch(id, payload.papers, payload.interests);
-    } else if (type === "getStatus") {
-      self.postMessage({ id, ok: true, result: currentStatus() });
-    } else if (type === "cancel") {
-      cancelAll();
-      self.postMessage({ id, ok: true, result: { cancelled: true } });
-    }
-  });
+  resumeReady
+    .then(() => {
+      if (type === "summarizeBatch") {
+        enqueueBatch(id, payload.papers, payload.interests);
+      } else if (type === "getStatus") {
+        self.postMessage({ id, ok: true, result: currentStatus() });
+      } else if (type === "cancel") {
+        cancelAll();
+        self.postMessage({ id, ok: true, result: { cancelled: true } });
+      }
+    })
+    .catch((err) => {
+      self.postMessage({ id, ok: false, error: String((err && err.message) || err) });
+    });
 };
