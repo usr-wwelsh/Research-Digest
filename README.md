@@ -8,9 +8,9 @@
 # Research Digest
 
 An installable, offline-first research digest. Fetching, scoring, and summarization all run
-**in your browser** — arXiv, Semantic Scholar, and OpenReview papers are summarized and tagged
-by a tiny DistilBERT model running entirely on your own device. No API keys, no cloud, no
-account, nothing synced.
+**in your browser** — arXiv, Semantic Scholar, and OpenReview papers are tagged and
+summarized extractively (key sentences selected, not generated) by a tiny DistilBERT model
+running entirely on your own device. No API keys, no cloud, no account, nothing synced.
 
 ---
 
