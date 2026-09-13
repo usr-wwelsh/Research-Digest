@@ -5,6 +5,7 @@ import { planExtractiveBatch, assembleExtractiveBatch } from "./extractive.js";
 import { getAll, putMany, getSetting, setSetting, del } from "./db.js";
 import { computeRelated } from "./relate.js";
 import { computeBatchSize } from "./batch-size.js";
+import { createSummaryQueue } from "./summary-queue.js";
 
 // Self-hosted asyncify build (see scripts/fetch_vendor_assets.sh) — the plain threaded build hangs post-download in Firefox.
 env.backends.onnx.wasm.wasmPaths = {
@@ -89,218 +90,33 @@ async function summarizeBatch(items) {
   }));
 }
 
-// One FIFO queue shared by any overlapping summarizeBatch calls from this page.
-const queue = []; // { paper, keywords } — at most one entry per arxiv_id
-const waiters = new Map(); // arxiv_id -> Set of jobIds waiting on that paper (queued OR being processed right now)
-const jobRemaining = new Map(); // jobId -> count of distinct papers that job is still waiting on
-let queueTotal = 0;
-let queueDone = 0;
-let running = false;
-
-// Set once a systemic (not per-paper) model-load failure is seen, so the
-// rest of the queue skips straight to leaving abstracts as-is.
-let summarizerBroken = false;
-
-function looksSystemic(err) {
-  const msg = String((err && err.message) || err);
-  return /create a session|session creation|backend not found/i.test(msg);
-}
-
-function currentStatus() {
-  if (!running) return null;
-  return { message: `Summarizing ${queueDone + 1}/${queueTotal}…`, done: queueDone, total: queueTotal };
-}
-
-// Persisted so resumePendingQueue can pick the batch back up after this worker dies on page nav.
+// Persisted so the queue can be picked back up after this worker dies on page nav.
 const QUEUE_STATE_KEY = "summaryQueueState";
 
-async function persistQueueState() {
-  if (!queue.length) {
-    await del("settings", QUEUE_STATE_KEY).catch(() => {});
-    return;
-  }
-  const pending = queue.map(({ paper, keywords }) => ({ id: paper.arxiv_id, keywords }));
-  await setSetting(QUEUE_STATE_KEY, { total: queueTotal, done: queueDone, pending }).catch(() => {});
-}
+const summaryQueue = createSummaryQueue({
+  batchSize: BATCH_SIZE,
+  summarize: summarizeBatch,
+  embed: embedBatch,
+  loadPapers: () => getAll("papers"),
+  savePapers: (papers) => putMany("papers", papers),
+  persist: (state) =>
+    state === null
+      ? del("settings", QUEUE_STATE_KEY).catch(() => {})
+      : setSetting(QUEUE_STATE_KEY, state).catch(() => {}),
+  relate: computeRelated,
+  post,
+  reply: (id, payload) => self.postMessage({ id, ...payload }),
+});
 
-function finishJob(jobId) {
-  const remaining = (jobRemaining.get(jobId) || 0) - 1;
-  if (remaining > 0) {
-    jobRemaining.set(jobId, remaining);
-    return;
-  }
-  jobRemaining.delete(jobId);
-  self.postMessage({ id: jobId, ok: true, result: { processed: queueDone, total: queueTotal } });
-}
-
-// Outer loop, not a single pass: a new summarizeBatch message can arrive
-// (and push into `queue`) while we're mid-`await` on the wrap-up steps
-// below (getAll/putMany) — re-check queue.length before actually declaring
-// idle instead of resetting the counters out from under a job that just
-// snuck in.
-async function runQueue() {
-  if (running) return;
-  running = true;
-  try {
-    while (true) {
-      while (queue.length) {
-        const chunk = queue.splice(0, BATCH_SIZE);
-        post({ type: "progress", status: currentStatus() });
-
-        const needSummary = chunk.filter(({ paper }) => !paper.summary && !summarizerBroken);
-        try {
-          if (needSummary.length) {
-            const results = await summarizeBatch(
-              needSummary.map(({ paper, keywords }) => ({
-                title: paper.title,
-                abstract: paper.abstract,
-                category: paper.primary_category,
-                keywords,
-              })),
-            );
-            needSummary.forEach(({ paper }, i) => Object.assign(paper, results[i]));
-          }
-        } catch (err) {
-          if (!summarizerBroken && looksSystemic(err)) {
-            summarizerBroken = true;
-            post({ type: "progress", status: { message: "Local summarizer unavailable this session — showing abstracts instead." } });
-          }
-          console.warn("models.worker: batch summarize failed for", needSummary.map(({ paper }) => paper.arxiv_id), err);
-        }
-
-        const needEmbedding = chunk.filter(({ paper }) => !paper.embedding);
-        if (needEmbedding.length) {
-          try {
-            const embeddings = await embedBatch(needEmbedding.map(({ paper }) => paper.abstract || paper.title));
-            needEmbedding.forEach(({ paper }, i) => {
-              paper.embedding = embeddings[i];
-            });
-          } catch (err) {
-            console.warn("models.worker: batch embed failed for", needEmbedding.map(({ paper }) => paper.arxiv_id), err);
-          }
-        }
-
-        await putMany("papers", chunk.map(({ paper }) => paper));
-        queueDone += chunk.length;
-        await persistQueueState();
-        for (const { paper } of chunk) {
-          const jobIds = waiters.get(paper.arxiv_id) || new Set();
-          waiters.delete(paper.arxiv_id);
-          for (const jobId of jobIds) finishJob(jobId);
-        }
-      }
-
-      const allPapers = await getAll("papers");
-      if (queue.length) continue;
-      const related = computeRelated(allPapers);
-      for (const p of allPapers) p.related = related[p.arxiv_id] || p.related || [];
-      await putMany("papers", allPapers);
-      if (queue.length) continue;
-      break;
-    }
-  } catch (err) {
-    // Without this the guard above stays true for the life of the worker and
-    // every later batch is silently dropped, its callers waiting forever.
-    console.error("models.worker: queue aborted", err);
-    failAllJobs(err);
-  } finally {
-    running = false;
-    queueTotal = 0;
-    queueDone = 0;
-    post({ type: "progress", status: null });
-  }
-}
-
-// A queue abort is systemic (IndexedDB gone, quota exhausted), not per-paper:
-// tell every waiting job rather than leaving it pending, and drop the work so
-// the next batch starts clean. The persisted state is left alone on purpose —
-// a reload retries it.
-function failAllJobs(err) {
-  const jobIds = new Set(jobRemaining.keys());
-  for (const ids of waiters.values()) for (const id of ids) jobIds.add(id);
-  queue.length = 0;
-  waiters.clear();
-  jobRemaining.clear();
-  for (const jobId of jobIds) {
-    self.postMessage({ id: jobId, ok: false, error: String((err && err.message) || err) });
-  }
-}
-
-// Dedupes against whatever's already queued or actively being processed —
-// two jobs (e.g. a batch you started, then re-triggered before it finished)
-// asking for the same paper share one actual processing pass, not two.
-function enqueueBatch(jobId, papers, interests) {
-  const toProcess = papers.filter((p) => !p.summary || !p.embedding);
-  if (!toProcess.length) {
-    self.postMessage({ id: jobId, ok: true, result: { processed: 0, total: 0 } });
-    return;
-  }
-  let waitingOn = 0;
-  for (const paper of toProcess) {
-    waitingOn += 1;
-    const arxivId = paper.arxiv_id;
-    if (waiters.has(arxivId)) {
-      waiters.get(arxivId).add(jobId);
-      continue;
-    }
-    waiters.set(arxivId, new Set([jobId]));
-    const interest = interests.find((i) => i.name === paper.interest);
-    queue.push({ paper, keywords: interest ? interest.keywords : [] });
-    queueTotal += 1;
-  }
-  jobRemaining.set(jobId, waitingOn);
-  persistQueueState();
-  runQueue();
-}
-
-// Drops every paper still sitting in `queue` (i.e. not yet claimed by
-// queue.shift() in runQueue) and resolves whichever jobs were waiting only
-// on those, immediately, with whatever they already had processed. A paper
-// mid-processing right now is left alone — runQueue notices the emptied
-// queue right after it finishes and winds down on its own.
-function cancelAll() {
-  const dropped = queue.splice(0, queue.length);
-  const affectedJobIds = new Set();
-  for (const { paper } of dropped) {
-    const jobIds = waiters.get(paper.arxiv_id);
-    if (!jobIds) continue;
-    waiters.delete(paper.arxiv_id);
-    for (const jobId of jobIds) affectedJobIds.add(jobId);
-  }
-  for (const jobId of affectedJobIds) {
-    jobRemaining.delete(jobId);
-    self.postMessage({ id: jobId, ok: true, result: { processed: queueDone, total: queueTotal, cancelled: true } });
-  }
-  persistQueueState();
-  // Immediate feedback that the click landed — the in-flight paper can't be
-  // interrupted, so the status line would otherwise sit frozen until it's done.
-  post({ type: "progress", status: running ? { message: "Cancelling…" } : null });
-}
-
-// Runs once, the moment this worker instance boots (including after the
-// browser reaped a previous instance mid-batch). Rehydrates from whatever
-// was last persisted and, if there's still unfinished work, resumes the
-// queue on its own — no page has to notice and resubmit a batch. Papers
-// that already picked up a summary+embedding through some other path
-// (or vanished from the corpus) are just counted done, not reprocessed.
+// Runs the moment this worker instance boots (including after the browser
+// reaped a previous instance mid-batch): rehydrates whatever was last
+// persisted and resumes on its own, so no page has to notice and resubmit.
 async function resumePendingQueue() {
   const state = await getSetting(QUEUE_STATE_KEY, null).catch(() => null);
   if (!state || !state.pending || !state.pending.length) return;
   const allPapers = await getAll("papers");
   const byId = new Map(allPapers.map((p) => [p.arxiv_id, p]));
-  queueTotal = state.total;
-  queueDone = state.done;
-  for (const { id, keywords } of state.pending) {
-    const paper = byId.get(id);
-    if (!paper || (paper.summary && paper.embedding)) {
-      queueDone += 1;
-      continue;
-    }
-    waiters.set(id, waiters.get(id) || new Set());
-    queue.push({ paper, keywords });
-  }
-  if (queue.length) runQueue();
-  else await del("settings", QUEUE_STATE_KEY).catch(() => {});
+  if (!summaryQueue.resume(state, byId)) await del("settings", QUEUE_STATE_KEY).catch(() => {});
 }
 
 // a getStatus right after boot waits on this for the resumed total; a failed
@@ -314,11 +130,11 @@ self.onmessage = (event) => {
   resumeReady
     .then(() => {
       if (type === "summarizeBatch") {
-        enqueueBatch(id, payload.papers, payload.interests);
+        summaryQueue.enqueue(id, payload.papers, payload.interests);
       } else if (type === "getStatus") {
-        self.postMessage({ id, ok: true, result: currentStatus() });
+        self.postMessage({ id, ok: true, result: summaryQueue.status() });
       } else if (type === "cancel") {
-        cancelAll();
+        summaryQueue.cancel();
         self.postMessage({ id, ok: true, result: { cancelled: true } });
       }
     })
