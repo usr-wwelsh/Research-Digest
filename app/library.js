@@ -3,7 +3,7 @@
 // selected). Built for reading the existing local corpus with no network,
 // e.g. while the relay/homelab is unreachable.
 import { getAll } from "./db.js";
-import { navHtml, paperCardHtml, escapeHtml, wireSaveButtons, getSavedIdSet, setStatus, corpusStats, corpusStatsHtml, fetchSummaryMessage } from "./ui-common.js";
+import { navHtml, paperCardHtml, escapeHtml, wireSaveButtons, getSavedIdSet, setStatus, corpusStats, corpusStatsHtml, fetchSummaryMessage, paperSortKey } from "./ui-common.js";
 import { fetchNewPapers, summarizePapers, getInterests, onRemoteSummaryStatus, cancelSummarize } from "./refresh.js";
 
 document.getElementById("nav").innerHTML = navHtml("library.html");
@@ -62,7 +62,7 @@ function filteredSorted() {
       }
       return true;
     })
-    .sort((a, b) => (b.published || "").localeCompare(a.published || ""));
+    .sort((a, b) => paperSortKey(b).localeCompare(paperSortKey(a)));
 }
 
 function libraryCardHtml(paper, isSaved, byId) {

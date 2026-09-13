@@ -21,19 +21,27 @@ const SOURCE_MODULES = {
 
 const DEFAULT_STALE_MS = 24 * 60 * 60 * 1000;
 
-function mergeIntoExisting(existing, candidate) {
+function mergeIntoExisting(existing, candidate, fetchedAt) {
   const merged = { ...existing };
   if (!merged.doi && candidate.doi) merged.doi = candidate.doi;
   if (!merged.venue && candidate.venue) merged.venue = candidate.venue;
+  // Same never-clobber rule: only records that never got a stamp. Without
+  // this the papers added before fetched_at existed stay sorted by
+  // publication date forever, i.e. invisible.
+  if (!merged.fetched_at) merged.fetched_at = fetchedAt;
   return merged;
 }
 
+// fetched_at is when a paper entered *this* corpus, which is not its
+// publication date: Semantic Scholar and OpenReview rank by relevance, so a
+// run routinely adds papers published years ago. Ordering views by published
+// buried them below the existing corpus — see paperSortKey in ui-common.js.
 // Pure planning core — no IndexedDB, no network. Given this run's raw
 // candidates and the existing corpus, decides what's a genuinely new paper
 // (scored, ranked, trimmed to maxPapers) vs a duplicate whose external ids
 // should be merged into an existing record (never overwriting fields it
 // already has — "never clobber, only add").
-export function planFetch(candidates, existingPapers, interest, effectiveKeywords, maxPapers = 25) {
+export function planFetch(candidates, existingPapers, interest, effectiveKeywords, maxPapers = 25, fetchedAt = new Date().toISOString()) {
   const pool = existingPapers.slice();
   const newCandidates = [];
   const merges = [];
@@ -41,10 +49,10 @@ export function planFetch(candidates, existingPapers, interest, effectiveKeyword
   for (const candidate of candidates) {
     const dup = findDuplicate(candidate, pool);
     if (dup) {
-      merges.push(mergeIntoExisting(dup, candidate));
+      merges.push(mergeIntoExisting(dup, candidate, fetchedAt));
       continue;
     }
-    const withMeta = { ...candidate, interest, score: score(candidate, effectiveKeywords) };
+    const withMeta = { ...candidate, interest, fetched_at: fetchedAt, score: score(candidate, effectiveKeywords) };
     newCandidates.push(withMeta);
     pool.push(withMeta);
   }

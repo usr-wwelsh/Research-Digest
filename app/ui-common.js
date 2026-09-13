@@ -268,3 +268,10 @@ export function fetchSummaryMessage(added, failures) {
   if (!added) return `No new papers — ${sources} ${cause}.`;
   return `Added ${added} paper${added === 1 ? "" : "s"} — ${sources} ${cause}, some interests skipped.`;
 }
+
+// Orders papers by when they became available to *you*, falling back to the
+// publication date for anything that predates the field (the seed corpus and
+// pre-fetched_at runs). Both are ISO-prefixed, so lexicographic order holds.
+export function paperSortKey(paper) {
+  return paper.fetched_at || paper.published || "";
+}

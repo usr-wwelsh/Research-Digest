@@ -53,3 +53,23 @@ test("two duplicate candidates within the same run dedup against each other too"
   const { insert } = planFetch(candidates, [], "Interest", [], 25);
   assert.equal(insert.length, 1);
 });
+
+test("a newly inserted paper records when it entered the corpus", () => {
+  const candidates = [{ arxiv_id: "a", title: "Edge Inference", abstract: "edge computing" }];
+  const { insert } = planFetch(candidates, [], "Interest", ["edge"], 25, "2026-09-13T10:00:00.000Z");
+  assert.equal(insert[0].fetched_at, "2026-09-13T10:00:00.000Z");
+});
+
+test("merging into an existing paper does not restamp it as newly arrived", () => {
+  const existing = [{ arxiv_id: "2508.01234", title: "T", doi: null, fetched_at: "2026-01-01T00:00:00.000Z" }];
+  const candidates = [{ dedup_arxiv_id: "2508.01234", doi: "10.1/x", title: "x", authors: [] }];
+  const { merge } = planFetch(candidates, existing, "Interest", [], 25, "2026-09-13T10:00:00.000Z");
+  assert.equal(merge[0].fetched_at, "2026-01-01T00:00:00.000Z");
+});
+
+test("a duplicate of a paper that never recorded its arrival fills the gap", () => {
+  const existing = [{ arxiv_id: "2508.01234", title: "T", doi: null }];
+  const candidates = [{ dedup_arxiv_id: "2508.01234", title: "T", authors: [] }];
+  const { merge } = planFetch(candidates, existing, "Interest", [], 25, "2026-09-13T10:00:00.000Z");
+  assert.equal(merge[0].fetched_at, "2026-09-13T10:00:00.000Z");
+});

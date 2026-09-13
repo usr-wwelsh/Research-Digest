@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { escapeHtml, paperCardHtml, navHtml, interestRowHtml, progressPercent, corpusStats, corpusStatsHtml, slugify, fetchSummaryMessage } from "../ui-common.js";
+import { escapeHtml, paperCardHtml, navHtml, interestRowHtml, progressPercent, corpusStats, corpusStatsHtml, slugify, fetchSummaryMessage, paperSortKey } from "../ui-common.js";
 
 test("escapeHtml escapes all five special characters", () => {
   assert.equal(escapeHtml(`<a href="x">'&'</a>`), "&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;");
@@ -193,4 +193,30 @@ test("one source failing for several interests is named once", () => {
 
 test("a single paper is not pluralised", () => {
   assert.match(fetchSummaryMessage(1, [{ source: "arxiv", status: 502 }]), /1 paper\b/);
+});
+
+// --- paperSortKey: the digest orders by arrival, not publication date ---
+
+test("arrival time outranks publication date when both are present", () => {
+  assert.equal(paperSortKey({ fetched_at: "2026-09-13T10:00:00.000Z", published: "2019-04-01" }),
+               "2026-09-13T10:00:00.000Z");
+});
+
+test("a paper that predates the corpus falls back to its publication date", () => {
+  assert.equal(paperSortKey({ published: "2025-10-30" }), "2025-10-30");
+});
+
+test("a paper with neither sorts last", () => {
+  const rows = [{ arxiv_id: "none" }, { arxiv_id: "dated", published: "2020-01-01" }];
+  rows.sort((a, b) => paperSortKey(b).localeCompare(paperSortKey(a)));
+  assert.deepEqual(rows.map((r) => r.arxiv_id), ["dated", "none"]);
+});
+
+test("an old paper fetched today outranks a newer one fetched long ago", () => {
+  const rows = [
+    { arxiv_id: "recent-paper", fetched_at: "2026-01-02T00:00:00.000Z", published: "2026-09-12" },
+    { arxiv_id: "old-paper-just-found", fetched_at: "2026-09-13T10:00:00.000Z", published: "2019-04-01" },
+  ];
+  rows.sort((a, b) => paperSortKey(b).localeCompare(paperSortKey(a)));
+  assert.deepEqual(rows.map((r) => r.arxiv_id), ["old-paper-just-found", "recent-paper"]);
 });
