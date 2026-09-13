@@ -125,7 +125,10 @@ summarizeBtn.addEventListener("click", async () => {
   if (!targets.length) return;
   summarizeBtn.disabled = true;
   try {
-    await summarizePapers(targets, interests, setStatus);
+    await summarizePapers(targets, interests, setStatus).catch((err) => {
+      console.error("library: summarize failed", err);
+      setStatus("Summarizing failed — showing abstracts instead.");
+    });
     allPapers = await getAll("papers");
     selected.clear();
     refreshFilterOptions();

@@ -71,7 +71,10 @@ async function doRefreshView() {
 
   const toSummarize = visible.filter((p) => !p.summary || !p.embedding);
   if (toSummarize.length && !autoSummarizeSuspended) {
-    await summarizePapers(toSummarize, interests, setStatus);
+    await summarizePapers(toSummarize, interests, setStatus).catch((err) => {
+      console.error("digest: summarize failed", err);
+      setStatus("Summarizing failed — showing abstracts instead.");
+    });
     allPapers = await getAll("papers");
     const filtered2 = filteredSorted();
     const visible2 = filtered2.slice(0, Math.min(revealed, filtered2.length));
