@@ -9,6 +9,7 @@ by direct testing, not assumed). Everything else the app needs (interests,
 saved papers, scoring, summarization) lives client-side; this is only here
 because CORS makes it unavoidable.
 """
+import http.client
 import json
 import mimetypes
 import os
@@ -197,6 +198,12 @@ class RelayHandler(BaseHTTPRequestHandler):
             # socket without a response — the client got a network error
             # carrying no status, so nothing could be reported to the user.
             self._send_json(504, {"error": "upstream timed out"})
+            return
+        except http.client.IncompleteRead:
+            # Same failure mode as the TimeoutError above: the upstream
+            # closed or reset mid-body, resp.read() raises this bare, and
+            # it's neither a TimeoutError nor a URLError.
+            self._send_json(504, {"error": "upstream connection interrupted"})
             return
         except urllib.error.URLError:
             self._send_json(502, {"error": "upstream unreachable"})

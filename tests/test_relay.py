@@ -1,6 +1,7 @@
 """relay.py — stateless CORS relay. The only real network boundary is the
 upstream HTTP call (fetch_upstream); everything else runs unmocked against
 a real server on a loopback port."""
+import http.client
 import threading
 import urllib.error
 import urllib.request
@@ -125,6 +126,19 @@ def test_upstream_read_timeout_returns_504_not_a_dropped_connection(server, monk
     def stall(url):
         raise TimeoutError("The read operation timed out")
     monkeypatch.setattr(relay, "fetch_upstream", stall)
+    status, headers, _ = http_get(server, "/relay/arxiv?search_query=x")
+    assert status == 504
+    assert headers["Access-Control-Allow-Origin"] == relay.ALLOWED_ORIGIN
+
+
+def test_upstream_incomplete_read_returns_504_not_a_dropped_connection(server, monkeypatch):
+    # An upstream that sends Content-Length then closes or resets mid-body
+    # makes resp.read() raise http.client.IncompleteRead — neither a
+    # TimeoutError nor a URLError, so it used to escape do_GET uncaught and
+    # drop the connection with no response at all.
+    def truncated(url):
+        raise http.client.IncompleteRead(b"partial")
+    monkeypatch.setattr(relay, "fetch_upstream", truncated)
     status, headers, _ = http_get(server, "/relay/arxiv?search_query=x")
     assert status == 504
     assert headers["Access-Control-Allow-Origin"] == relay.ALLOWED_ORIGIN
