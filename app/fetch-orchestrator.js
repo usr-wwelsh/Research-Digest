@@ -44,12 +44,17 @@ function mergeIntoExisting(existing, candidate, fetchedAt) {
 export function planFetch(candidates, existingPapers, interest, effectiveKeywords, maxPapers = 25, fetchedAt = new Date().toISOString()) {
   const pool = existingPapers.slice();
   const newCandidates = [];
-  const merges = [];
+  const mergesById = new Map();
 
   for (const candidate of candidates) {
     const dup = findDuplicate(candidate, pool);
     if (dup) {
-      merges.push(mergeIntoExisting(dup, candidate, fetchedAt));
+      const merged = mergeIntoExisting(dup, candidate, fetchedAt);
+      // Replace dup in the pool (not just record the merge) so a later
+      // candidate in this same run that also matches this paper merges
+      // against the latest fields instead of the stale pre-merge original.
+      pool[pool.indexOf(dup)] = merged;
+      mergesById.set(merged.arxiv_id, merged);
       continue;
     }
     const withMeta = { ...candidate, interest, fetched_at: fetchedAt, score: score(candidate, effectiveKeywords) };
@@ -58,7 +63,7 @@ export function planFetch(candidates, existingPapers, interest, effectiveKeyword
   }
 
   newCandidates.sort((a, b) => (b.score || 0) - (a.score || 0));
-  return { insert: newCandidates.slice(0, maxPapers), merge: merges };
+  return { insert: newCandidates.slice(0, maxPapers), merge: [...mergesById.values()] };
 }
 
 async function boostKeywordsFor(interest) {
