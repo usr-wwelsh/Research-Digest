@@ -9,7 +9,7 @@ import { getAll, putMany, getSetting, setSetting } from "./db.js";
 import { score } from "./scoring.js";
 import { findDuplicate } from "./dedup.js";
 import { computeBoostKeywords } from "./feedback.js";
-import * as arxivSource from "./sources/arxiv.js";
+import * as arxivSource from "./sources/arxiv-direct.js";
 import * as semanticscholarSource from "./sources/semanticscholar.js";
 import * as openreviewSource from "./sources/openreview.js";
 

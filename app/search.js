@@ -1,4 +1,4 @@
-import * as arxiv from "./sources/arxiv.js";
+import * as arxiv from "./sources/arxiv-direct.js";
 import * as semanticscholar from "./sources/semanticscholar.js";
 import * as openreview from "./sources/openreview.js";
 import { getAll, put } from "./db.js";
