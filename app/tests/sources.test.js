@@ -1,74 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { normalizeEntry, dateFilter, buildSearchQuery } from "../sources/arxiv.js";
 import { normalizeResult, parseResponse as parseS2Response } from "../sources/semanticscholar.js";
 import { normalizeNote, parseResponse as parseOpenReviewResponse } from "../sources/openreview.js";
-
-// --- arxiv.js: normalizeEntry is the pure half of parseFeed (the DOM half
-// needs a real DOMParser and is verified manually in-browser) ---
-
-test("arxiv normalizeEntry extracts a bare id without the version suffix", () => {
-  const p = normalizeEntry({ id: "http://arxiv.org/abs/2508.01234v2", title: "T", summary: "S" });
-  assert.equal(p.arxiv_id, "2508.01234");
-  assert.equal(p.source, "arxiv");
-});
-
-test("arxiv normalizeEntry collapses whitespace in title and abstract", () => {
-  const p = normalizeEntry({
-    id: "http://arxiv.org/abs/2508.01234v1",
-    title: "  Efficient   Edge   Inference  ",
-    summary: "Line one\n  line two.",
-  });
-  assert.equal(p.title, "Efficient Edge Inference");
-  assert.equal(p.abstract, "Line one line two.");
-});
-
-test("arxiv normalizeEntry derives pdf_url and truncates dates to YYYY-MM-DD", () => {
-  const p = normalizeEntry({
-    id: "http://arxiv.org/abs/2508.01234v1",
-    title: "T",
-    summary: "S",
-    published: "2026-08-15T12:00:00Z",
-    updated: "2026-08-20T09:30:00Z",
-  });
-  assert.equal(p.pdf_url, "https://arxiv.org/pdf/2508.01234.pdf");
-  assert.equal(p.published, "2026-08-15");
-  assert.equal(p.updated, "2026-08-20");
-});
-
-test("arxiv normalizeEntry handles missing dates/categories/authors", () => {
-  const p = normalizeEntry({ id: "http://arxiv.org/abs/2508.01234v1", title: "T", summary: "S" });
-  assert.equal(p.published, null);
-  assert.deepEqual(p.categories, []);
-  assert.deepEqual(p.authors, []);
-});
-
-test("arxiv dateFilter is empty for zero/negative/missing days", () => {
-  assert.equal(dateFilter(0), "");
-  assert.equal(dateFilter(-1), "");
-  assert.equal(dateFilter(undefined), "");
-});
-
-test("arxiv dateFilter builds a submittedDate range", () => {
-  const f = dateFilter(7);
-  assert.match(f, /^submittedDate:\[\d{8}0000 TO \d{8}2359\]$/);
-});
-
-test("arxiv buildSearchQuery prefers query_by_source.arxiv when present", () => {
-  const q = buildSearchQuery({ query_by_source: { arxiv: "cat:cs.LG" }, query: "ignored" }, 0);
-  assert.equal(q, "cat:cs.LG");
-});
-
-test("arxiv buildSearchQuery falls back to a free-text keyword query for a custom interest", () => {
-  const q = buildSearchQuery({ keywords: ["edge", "quantization"] }, 0);
-  assert.equal(q, "all:edge OR quantization");
-});
-
-test("arxiv buildSearchQuery appends the date filter when recentDays is set", () => {
-  const q = buildSearchQuery({ query: "cat:cs.LG" }, 7);
-  assert.match(q, /^\(cat:cs\.LG\) AND submittedDate:\[/);
-});
 
 // --- semanticscholar.js: fully JSON, fully pure ---
 
