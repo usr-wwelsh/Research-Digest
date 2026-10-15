@@ -5,7 +5,7 @@ import { withRetry, isTransient, backoffDelay } from "../retry.js";
 const noSleep = async () => {};
 
 function httpError(status) {
-  const err = new Error(`relay error: ${status}`);
+  const err = new Error(`error: ${status}`);
   err.status = status;
   return err;
 }

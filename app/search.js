@@ -1,6 +1,4 @@
 import * as arxiv from "./sources/arxiv-direct.js";
-import * as semanticscholar from "./sources/semanticscholar.js";
-import * as openreview from "./sources/openreview.js";
 import { getAll, put } from "./db.js";
 import { findDuplicate } from "./dedup.js";
 import { navHtml, paperCardHtml, wireSearchSaveButtons, getSavedIdSet, setStatus, slugify, ALL_SOURCES } from "./ui-common.js";
@@ -31,14 +29,10 @@ async function runSearch(query) {
   }
 
   hintEl.hidden = true;
-  setStatus("Searching arXiv, Semantic Scholar, OpenReview…");
+  setStatus("Searching arXiv…");
 
-  const [a, s, o] = await Promise.allSettled([
-    arxiv.search(q, 15),
-    semanticscholar.search(q, 15),
-    openreview.search(q, 15),
-  ]);
-  const raw = [a, s, o].flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  const [a] = await Promise.allSettled([arxiv.search(q, 15)]);
+  const raw = a.status === "fulfilled" ? a.value : [];
 
   const deduped = [];
   for (const candidate of raw) {
@@ -60,8 +54,8 @@ inputEl.addEventListener("input", () => {
 
 // Turns the current search into a recurring interest — same fields
 // settings.js writes, so it's editable there afterwards like any other
-// interest. Defaults to all three sources, since that's what the search
-// this button sits next to actually covered.
+// interest. Uses every source, since that's what the search
+// this button sits next to covered.
 addInterestBtn.addEventListener("click", async () => {
   const query = inputEl.value.trim();
   if (query.length < 2) return;

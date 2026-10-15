@@ -1,4 +1,4 @@
-import { relayJson } from "./relay.js";
+import { getJson } from "./http.js";
 
 const API = "https://api.openalex.org/works";
 const ARXIV_SOURCE_ID = "S4306400194";
@@ -62,7 +62,7 @@ function request(searchText, perPage, recentDays) {
     "per-page": String(perPage),
     select: SELECT,
   });
-  return relayJson(`${API}?${params}`, "openalex");
+  return getJson(`${API}?${params}`, "openalex");
 }
 
 export async function fetchForInterest(interest, { recentDays = 7, maxResults = 60 } = {}) {

@@ -10,13 +10,9 @@ import { score } from "./scoring.js";
 import { findDuplicate } from "./dedup.js";
 import { computeBoostKeywords } from "./feedback.js";
 import * as arxivSource from "./sources/arxiv-direct.js";
-import * as semanticscholarSource from "./sources/semanticscholar.js";
-import * as openreviewSource from "./sources/openreview.js";
 
 const SOURCE_MODULES = {
   arxiv: arxivSource,
-  semanticscholar: semanticscholarSource,
-  openreview: openreviewSource,
 };
 
 const DEFAULT_STALE_MS = 24 * 60 * 60 * 1000;
@@ -33,7 +29,7 @@ function mergeIntoExisting(existing, candidate, fetchedAt) {
 }
 
 // fetched_at is when a paper entered *this* corpus, which is not its
-// publication date: Semantic Scholar and OpenReview rank by relevance, so a
+// publication date: search-ranked sources return relevance order, so a
 // run routinely adds papers published years ago. Ordering views by published
 // buried them below the existing corpus — see paperSortKey in ui-common.js.
 // Pure planning core — no IndexedDB, no network. Given this run's raw
@@ -107,9 +103,8 @@ async function fetchOneInterest(interest) {
   return { added: insert.length, failures };
 }
 
-// onProgress fires per interest: sources are paced at ~1/sec to stay inside
-// relay.py's bucket, so a full cycle is tens of seconds and a single static
-// "Fetching new papers…" reads as a hang.
+// onProgress fires per interest: a full cycle can take a while and a single
+// static "Fetching new papers…" reads as a hang.
 export async function runFetchCycle(interests, onProgress = () => {}) {
   const enabled = interests.filter((i) => i.enabled !== false);
   let added = 0;

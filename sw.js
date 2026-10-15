@@ -1,8 +1,8 @@
 // App-shell service worker. Root scope so it can control everything under
-// / (including /app/*). Precaches the shell for offline reading; /relay/*
-// (live search/fetch data) is always network-only, never cached — see
-// each fetch handler below for the reasoning.
-const CACHE_VERSION = "shell-v11";
+// / (including /app/*). Precaches the shell for offline reading; cross-origin
+// API data is always network-only, never cached — see each fetch handler
+// below for the reasoning.
+const CACHE_VERSION = "shell-v12";
 
 const PRECACHE_URLS = [
   "/",
@@ -39,13 +39,11 @@ const PRECACHE_URLS = [
   "/app/library.js",
   "/app/settings.js",
   "/app/models.worker.js",
-  "/app/sources/relay.js",
+  "/app/sources/http.js",
   "/app/sources/arxiv-direct.js",
   "/app/sources/datacite.js",
   "/app/sources/openalex.js",
   "/app/sources/fallback.js",
-  "/app/sources/semanticscholar.js",
-  "/app/sources/openreview.js",
   "/app/vendor/transformers.min.js",
 ];
 
@@ -93,7 +91,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
   // Live data — search results, new-paper fetches — must always be live.
-  if (url.pathname.startsWith("/relay/")) return;
+  if (url.origin !== self.location.origin) return;
 
   const cacheable =
     url.pathname === "/" ||

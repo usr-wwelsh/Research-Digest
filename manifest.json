@@ -1,7 +1,7 @@
 {
   "name": "Research Digest",
   "short_name": "Research Digest",
-  "description": "Offline-first arXiv / Semantic Scholar / OpenReview digest with on-device summarization — no API keys, no cloud, no account.",
+  "description": "Offline-first arXiv digest with on-device summarization — no API keys, no cloud, no account.",
   "start_url": "/app/digest.html",
   "scope": "/",
   "display": "standalone",

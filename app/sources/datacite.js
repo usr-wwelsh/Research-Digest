@@ -1,4 +1,4 @@
-import { relayJson } from "./relay.js";
+import { getJson } from "./http.js";
 
 const API = "https://api.datacite.org/dois";
 const ARXIV_DOI_PREFIX = "10.48550/arxiv.";
@@ -79,7 +79,7 @@ function request(query, size) {
     sort: "-created",
     "page[size]": String(size),
   });
-  return relayJson(`${API}?${params}`, "datacite");
+  return getJson(`${API}?${params}`, "datacite");
 }
 
 export async function fetchForInterest(interest, { recentDays = 7, maxResults = 60 } = {}) {

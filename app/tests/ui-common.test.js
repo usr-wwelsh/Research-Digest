@@ -78,9 +78,9 @@ test("paperCardHtml shows at most 3 related papers even if more are stored", () 
 test("interestRowHtml checks only the interest's own enabled sources", () => {
   const html = interestRowHtml({ name: "X", keywords: ["a"], sources: ["arxiv"] }, 0);
   const arxivMatch = html.match(/data-source="arxiv"[^/]*\/>/)[0];
-  const s2Match = html.match(/data-source="semanticscholar"[^/]*\/>/)[0];
   assert.ok(arxivMatch.includes("checked"));
-  assert.ok(!s2Match.includes("checked"));
+  const off = interestRowHtml({ name: "X", keywords: ["a"], sources: [] }, 0);
+  assert.ok(!off.match(/data-source="arxiv"[^/]*\/>/)[0].includes("checked"));
 });
 
 test("interestRowHtml joins keywords with a comma for editing", () => {

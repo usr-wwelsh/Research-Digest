@@ -10,7 +10,7 @@
 #   3. Installs cloudflared
 #   4. Clones the repo and sets up the Python venv
 #   5. Fetches the onnxruntime-web WASM runtime for the in-browser summarizer
-#   6. Configures systemd services (Caddy + relay)
+#   6. Configures systemd services (Caddy)
 #   7. Sets up a weekly cron job (Monday 8am)
 
 set -euo pipefail
@@ -108,13 +108,6 @@ systemctl daemon-reload
 systemctl enable research-digest-caddy.service
 systemctl start research-digest-caddy.service
 
-# --- 8. Relay service (stateless CORS relay for the client-side PWA) ---
-log "Setting up relay service..."
-cp "$INSTALL_DIR/research-digest-relay.service" /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable research-digest-relay.service
-systemctl start research-digest-relay.service
-
 # --- 9. Cloudflare tunnel ---
 warn "Cloudflare tunnel setup requires interactive login."
 warn "After this script finishes, run:"
@@ -152,7 +145,6 @@ chmod 644 /etc/cron.d/research-digest
 log "=== Setup complete! ==="
 echo ""
 echo "  Caddy is serving on :8080"
-echo "  Relay is serving on 127.0.0.1:8082 (proxied via Caddy at /relay/*)"
 echo "  Weekly digest runs: Monday 8:00 AM"
 echo "  Logs: $INSTALL_DIR/logs/"
 echo ""

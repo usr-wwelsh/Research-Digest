@@ -6,7 +6,7 @@
 	# onnxruntime-web silently falls back to numThreads=1 no matter which
 	# WASM binary is loaded — see fetch_vendor_assets.sh, which already
 	# fetches the threaded build. No cross-origin subresources are loaded
-	# (relay/* is same-origin reverse-proxied), so this is safe to set
+	# (source APIs are fetched in CORS mode), so this is safe to set
 	# globally.
 	header {
 		Cross-Origin-Opener-Policy "same-origin"
@@ -28,12 +28,6 @@
 	handle @allowed {
 		rewrite / /index.html
 		file_server
-	}
-
-	# Stateless CORS relay for the client-side PWA (no DB, no auth — see
-	# relay.py). Must come before the catch-all below.
-	handle /relay/* {
-		reverse_proxy 127.0.0.1:8082
 	}
 
 	# Block everything else

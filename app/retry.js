@@ -1,4 +1,4 @@
-// Retry policy for relay calls. Only transient classes retry — a 4xx means
+// Retry policy for source API calls. Only transient classes retry — a 4xx means
 // the request itself is wrong and will fail identically every time.
 const DEFAULT_RETRIES = 2;
 const DEFAULT_BASE_MS = 500;
@@ -9,8 +9,8 @@ export function isTransient(err) {
   return err.status === 429 || err.status >= 500;
 }
 
-// relay.py answers its own rate limiter with Retry-After: 1; honouring that
-// beats guessing, and stops a retry landing inside the same closed window.
+// Honouring an upstream Retry-After beats guessing, and stops a retry
+// landing inside the same closed window.
 // Only the delta-seconds form is read — an HTTP-date falls back to backoff.
 export function retryAfterMs(err) {
   const raw = err && err.retryAfter;

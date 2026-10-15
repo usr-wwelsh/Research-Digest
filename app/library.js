@@ -1,7 +1,7 @@
 // Read-only-by-default browse of everything already in IndexedDB — no
 // fetch, no summarization, until the user explicitly asks (Summarize
 // selected). Built for reading the existing local corpus with no network,
-// e.g. while the relay/homelab is unreachable.
+// e.g. while offline.
 import { getAll } from "./db.js";
 import { navHtml, paperCardHtml, escapeHtml, wireSaveButtons, getSavedIdSet, setStatus, corpusStats, corpusStatsHtml, fetchSummaryMessage, paperSortKey } from "./ui-common.js";
 import { fetchNewPapers, summarizePapers, getInterests, onRemoteSummaryStatus, cancelSummarize } from "./refresh.js";

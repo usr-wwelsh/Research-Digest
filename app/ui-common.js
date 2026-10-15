@@ -60,7 +60,7 @@ export function paperCardHtml(paper, isSaved, byId = null) {
     </div>`;
 }
 
-export const ALL_SOURCES = ["arxiv", "semanticscholar", "openreview"];
+export const ALL_SOURCES = ["arxiv"];
 
 export function slugify(name) {
   return (name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "") || `interest-${Date.now()}`;
