@@ -33,7 +33,16 @@ headers="$(curl -sI "http://127.0.0.1:$PORT/")"
 grep -qi '^cross-origin-opener-policy: same-origin' <<<"$headers" || fail "COOP header missing"
 grep -qi '^cross-origin-embedder-policy: require-corp' <<<"$headers" || fail "COEP header missing"
 
+grep -qi "^content-security-policy: .*script-src 'self' 'wasm-unsafe-eval' blob:" <<<"$headers" || fail "CSP header missing"
+for blocked in /app/.git/config /app/digest.js.map; do
+    [ "$(status "$blocked")" = 404 ] || fail "$blocked is exposed"
+done
+
 user="$("$ENGINE" inspect -f '{{.Config.User}}' "$NAME")"
 case "$user" in ""|0|root|0:*|root:*) fail "container runs as root";; esac
+
+start=$SECONDS
+"$ENGINE" stop "$NAME" >/dev/null
+[ $((SECONDS - start)) -lt 5 ] || fail "container ignored SIGTERM"
 
 echo "ok"

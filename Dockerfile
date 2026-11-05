@@ -1,10 +1,10 @@
-FROM docker.io/library/alpine:3.22 AS vendor
+FROM docker.io/library/alpine:3.22@sha256:2e0b81d60597f449baa56dc25d355367869d2dca4cd57e866f1e2b52af3eb55f AS vendor
 RUN apk add --no-cache bash curl
 WORKDIR /src
 COPY scripts/fetch_vendor_assets.sh scripts/
 RUN bash scripts/fetch_vendor_assets.sh
 
-FROM docker.io/library/golang:1.27-alpine AS server
+FROM docker.io/library/golang:1.27-alpine@sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb AS server
 WORKDIR /src
 COPY server/go.mod server/*.go ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server .

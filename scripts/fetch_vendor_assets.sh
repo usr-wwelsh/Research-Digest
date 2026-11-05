@@ -22,20 +22,29 @@ OUT_DIR="$ROOT_DIR/vendor/ort"
 
 mkdir -p "$OUT_DIR"
 
-FILES=(
-    "ort-wasm-simd-threaded.mjs"
-    "ort-wasm-simd-threaded.wasm"
-    "ort-wasm-simd-threaded.asyncify.mjs"
-    "ort-wasm-simd-threaded.asyncify.wasm"
+declare -A SHA256=(
+    ["ort-wasm-simd-threaded.mjs"]="5f2cd914554830762579c372d0211614c1e3f40ab3f6c0cfcf0900343229071d"
+    ["ort-wasm-simd-threaded.wasm"]="f4f290847a4df02d0b93cdbf39b4b0e71acefbe80573e7e6b9342a7abd7b290a"
+    ["ort-wasm-simd-threaded.asyncify.mjs"]="5959c6733039619c9af710d8e1bae8d6e84402787990637be987c2b1bd6c5fa9"
+    ["ort-wasm-simd-threaded.asyncify.wasm"]="e0c0c6d3e73d43b8a249972f8358f845b08cc16fec3c80efafdf8bed40366786"
 )
 
-for f in "${FILES[@]}"; do
-    if [ -f "$OUT_DIR/$f" ]; then
-        echo "  already have $f"
+verify() {
+    echo "${SHA256[$1]}  $2" | sha256sum -c >/dev/null 2>&1
+}
+
+for f in "${!SHA256[@]}"; do
+    if [ -f "$OUT_DIR/$f" ] && verify "$f" "$OUT_DIR/$f"; then
+        echo "  verified $f"
         continue
     fi
     echo "  fetching $f..."
     curl -fsSL "$ORT_BASE/$f" -o "$OUT_DIR/$f.tmp"
+    if ! verify "$f" "$OUT_DIR/$f.tmp"; then
+        rm -f "$OUT_DIR/$f.tmp"
+        echo "checksum mismatch for $f" >&2
+        exit 1
+    fi
     mv "$OUT_DIR/$f.tmp" "$OUT_DIR/$f"
 done
 
