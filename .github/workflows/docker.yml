@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  IMAGE: ghcr.io/usr-wwelsh/research-digest
+  REGISTRY_IMAGE: ghcr.io/usr-wwelsh/research-digest
 
 jobs:
   image:
@@ -56,7 +56,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE }}
+          images: ${{ env.REGISTRY_IMAGE }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
