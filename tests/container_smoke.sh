@@ -25,7 +25,7 @@ done
 [ "$(status /app/digest.html)" = 200 ] || fail "app page not served"
 [ "$(status /sw.js)" = 200 ] || fail "sw.js not served"
 [ "$(status /vendor/ort/ort-wasm-simd-threaded.wasm)" = 200 ] || fail "ort wasm missing"
-for blocked in /config.json /db.py /Caddyfile /.env /run.sh; do
+for blocked in /app/ /icons/ /config.json /db.py /Caddyfile /.env /run.sh; do
     [ "$(status "$blocked")" = 404 ] || fail "$blocked is exposed"
 done
 
@@ -33,7 +33,7 @@ headers="$(curl -sI "http://127.0.0.1:$PORT/")"
 grep -qi '^cross-origin-opener-policy: same-origin' <<<"$headers" || fail "COOP header missing"
 grep -qi '^cross-origin-embedder-policy: require-corp' <<<"$headers" || fail "COEP header missing"
 
-uid="$("$ENGINE" exec "$NAME" id -u)"
-[ "$uid" != 0 ] || fail "container process runs as root"
+user="$("$ENGINE" inspect -f '{{.Config.User}}' "$NAME")"
+case "$user" in ""|0|root|0:*|root:*) fail "container runs as root";; esac
 
 echo "ok"

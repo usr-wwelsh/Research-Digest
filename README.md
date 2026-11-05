@@ -221,7 +221,7 @@ MIT — see [LICENSE](LICENSE).
 
 ## Container
 
-Static image (Caddy, non-root, read-only-friendly) published to `ghcr.io/usr-wwelsh/research-digest` on every push to `main`.
+Static image (tiny Go file server on `scratch`, non-root, no shell, read-only-friendly) published to `ghcr.io/usr-wwelsh/research-digest` on every push to `main`.
 
 ```bash
 docker run -d -p 8080:8080 --read-only --tmpfs /tmp --cap-drop ALL \

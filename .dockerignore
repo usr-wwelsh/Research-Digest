@@ -5,6 +5,6 @@
 !icons
 !app
 !scripts/fetch_vendor_assets.sh
-!Caddyfile.container
+!server
 app/node_modules
 app/tests
