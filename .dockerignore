@@ -1,0 +1,10 @@
+*
+!index.html
+!manifest.json
+!sw.js
+!icons
+!app
+!scripts/fetch_vendor_assets.sh
+!Caddyfile.container
+app/node_modules
+app/tests

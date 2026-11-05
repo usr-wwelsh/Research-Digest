@@ -216,3 +216,16 @@ MIT — see [LICENSE](LICENSE).
   [OpenAlex](https://openalex.org/) for the open research APIs
 - Hugging Face `transformers` / `transformers.js`, and the DistilBERT model authors,
   for local inference — server-side and now in-browser
+
+---
+
+## Container
+
+Static image (Caddy, non-root, read-only-friendly) published to `ghcr.io/usr-wwelsh/research-digest` on every push to `main`.
+
+```bash
+docker run -d -p 8080:8080 --read-only --tmpfs /tmp --cap-drop ALL \
+  --security-opt no-new-privileges ghcr.io/usr-wwelsh/research-digest:latest
+```
+
+Optional: bind-mount a `seed-corpus.json` at `/srv/seed-corpus.json` to pre-populate fresh installs.
