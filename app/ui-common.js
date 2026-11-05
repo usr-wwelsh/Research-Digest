@@ -245,7 +245,7 @@ export function setStatus(status, onCancel = null) {
   const hasProgress = typeof status === "object" && Number.isFinite(status.total) && status.total > 0;
   const cancelable = typeof status === "object" && !!onCancel;
   const bar = hasProgress
-    ? `<div class="status-bar"><div class="status-bar-fill" style="width: ${progressPercent(status.done, status.total)}%"></div></div>`
+    ? `<div class="status-bar"><div class="status-bar-fill"></div></div>`
     : "";
   el.hidden = false;
   el.classList.toggle("has-progress", hasProgress);
@@ -253,6 +253,9 @@ export function setStatus(status, onCancel = null) {
     ? `<div class="status-row"><span class="status-text">${escapeHtml(message)}</span>` +
       `<button type="button" class="btn status-cancel-btn">Cancel</button></div>${bar}`
     : `<span class="status-text">${escapeHtml(message)}</span>${bar}`;
+  if (hasProgress) {
+    el.querySelector(".status-bar-fill").style.width = `${progressPercent(status.done, status.total)}%`;
+  }
   if (cancelable) {
     el.querySelector(".status-cancel-btn").addEventListener("click", onCancel, { once: true });
   }

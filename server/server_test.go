@@ -3,12 +3,14 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
-func newSite(t *testing.T) http.Handler {
+func newSite(t testing.TB) http.Handler {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string]string{
@@ -29,6 +31,10 @@ func newSite(t *testing.T) http.Handler {
 		"secret.html.bak":               "x",
 		"notes/private.html":            "<html>private-but-html</html>",
 		"app/node_modules/pkg/index.js": "x",
+		"app/.git/config":               "x",
+		"app/.hidden.js":                "x",
+		"app/a..b.js":                   "x",
+		"app/digest.js.map":             "{}",
 	}
 	for name, body := range files {
 		p := filepath.Join(root, name)
@@ -155,4 +161,96 @@ func TestContentTypes(t *testing.T) {
 			t.Errorf("%s: Content-Type %q, want %q", path, got, want)
 		}
 	}
+}
+
+func TestHardeningHeadersOnEveryResponse(t *testing.T) {
+	h := newSite(t)
+	want := map[string]string{
+		"Referrer-Policy":              "no-referrer",
+		"Cross-Origin-Resource-Policy": "same-origin",
+		"Permissions-Policy":           "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+	}
+	for _, path := range []string{"/", "/missing", "/config.json"} {
+		rec := get(h, "GET", path)
+		for k, v := range want {
+			if got := rec.Header().Get(k); got != v {
+				t.Errorf("%s: %s %q, want %q", path, k, got, v)
+			}
+		}
+	}
+}
+
+func TestCSPLocksDownEveryResponse(t *testing.T) {
+	h := newSite(t)
+	for _, path := range []string{"/", "/missing"} {
+		csp := get(h, "GET", path).Header().Get("Content-Security-Policy")
+		for _, d := range []string{
+			"default-src 'self'", "script-src 'self' 'wasm-unsafe-eval' blob:", "object-src 'none'",
+			"base-uri 'none'", "frame-ancestors 'none'", "form-action 'none'",
+		} {
+			if !strings.Contains(csp, d) {
+				t.Errorf("%s: CSP missing %q in %q", path, d, csp)
+			}
+		}
+		if strings.Contains(csp, "unsafe-inline") || strings.Contains(csp, "unsafe-eval'") && !strings.Contains(csp, "wasm-unsafe-eval") {
+			t.Errorf("%s: CSP allows inline/eval: %q", path, csp)
+		}
+	}
+}
+
+func TestDeniesDotfilesAndSourceMapsUnderPrefixes(t *testing.T) {
+	h := newSite(t)
+	for _, path := range []string{"/app/.git/config", "/app/.hidden.js", "/app/digest.js.map"} {
+		if got := get(h, "GET", path).Code; got != 404 {
+			t.Errorf("%s: got %d, want 404", path, got)
+		}
+	}
+}
+
+func TestServesDoubleDotInsideFilename(t *testing.T) {
+	if got := get(newSite(t), "GET", "/app/a..b.js").Code; got != 200 {
+		t.Errorf("got %d, want 200", got)
+	}
+}
+
+func FuzzCachePolicyNeverAllowsOutsideAllowlist(f *testing.F) {
+	for _, s := range []string{"/", "/app/x", "/../etc/passwd", "/app/..", "/vendor/%2e", "//app/x", "/APP/x"} {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, path string) {
+		if _, ok := cachePolicy(path); !ok {
+			return
+		}
+		if _, exact := exactPaths[path]; exact {
+			return
+		}
+		for _, p := range prefixes {
+			if strings.HasPrefix(path, p.prefix) {
+				return
+			}
+		}
+		t.Fatalf("%q allowed outside allowlist", path)
+	})
+}
+
+func FuzzHandlerNeverServesOutsideRoot(f *testing.F) {
+	for _, s := range []string{"/app/../config.json", "/app/%2e%2e/config.json", "/app/..%2f..%2fconfig.json", "/vendor//..//.env"} {
+		f.Add(s)
+	}
+	h := newSite(f)
+	f.Fuzz(func(t *testing.T, path string) {
+		if !strings.HasPrefix(path, "/") || strings.ContainsAny(path, " \r\n\t\x00") {
+			return
+		}
+		if _, err := url.ParseRequestURI(path); err != nil {
+			return
+		}
+		rec := get(h, "GET", path)
+		body := rec.Body.String()
+		for _, secret := range []string{"SECRET=1", "private-but-html"} {
+			if strings.Contains(body, secret) {
+				t.Fatalf("%q leaked %q", path, secret)
+			}
+		}
+	})
 }

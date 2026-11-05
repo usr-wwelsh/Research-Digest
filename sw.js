@@ -2,7 +2,7 @@
 // / (including /app/*). Precaches the shell for offline reading; cross-origin
 // API data is always network-only, never cached — see each fetch handler
 // below for the reasoning.
-const CACHE_VERSION = "shell-v12";
+const CACHE_VERSION = "shell-v13";
 
 const PRECACHE_URLS = [
   "/",
@@ -17,6 +17,8 @@ const PRECACHE_URLS = [
   "/app/library.html",
   "/app/settings.html",
   "/app/style.css",
+  "/app/landing.css",
+  "/app/landing.js",
   "/app/pwa.js",
   "/app/db.js",
   "/app/ui-common.js",

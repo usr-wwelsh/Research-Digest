@@ -1,12 +1,33 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"path"
 	"strings"
+	"syscall"
 	"time"
 )
+
+const csp = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob:; style-src 'self'; img-src 'self' data:; " +
+	"connect-src 'self' https://api.openalex.org https://api.datacite.org https://huggingface.co https://*.huggingface.co https://*.hf.co; " +
+	"worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
+
+func hidden(p string) bool {
+	if strings.HasSuffix(p, ".map") {
+		return true
+	}
+	for _, seg := range strings.Split(p, "/") {
+		if strings.HasPrefix(seg, ".") {
+			return true
+		}
+	}
+	return false
+}
 
 var exactPaths = map[string]string{
 	"/index.html":       "no-cache, must-revalidate",
@@ -36,13 +57,19 @@ func cachePolicy(path string) (string, bool) {
 	return "", false
 }
 
+func cleaned(p string) string { return path.Clean(p) }
+
 func newHandler(root string) http.Handler {
 	dir := http.Dir(root)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("Cross-Origin-Opener-Policy", "same-origin")
 		h.Set("Cross-Origin-Embedder-Policy", "require-corp")
+		h.Set("Cross-Origin-Resource-Policy", "same-origin")
 		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+		h.Set("Content-Security-Policy", csp)
 
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			h.Set("Allow", "GET, HEAD")
@@ -55,7 +82,7 @@ func newHandler(root string) http.Handler {
 			path = "/index.html"
 		}
 		cache, ok := cachePolicy(path)
-		if !ok || strings.Contains(path, "..") {
+		if !ok || path != cleaned(path) || hidden(path) {
 			http.NotFound(w, r)
 			return
 		}
@@ -97,5 +124,16 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    16 << 10,
 	}
-	log.Fatal(srv.ListenAndServe())
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutdownCtx)
+	}()
+	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		log.Fatal(err)
+	}
 }
