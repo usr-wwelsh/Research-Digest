@@ -20,7 +20,7 @@ mkdir -p "$SCRIPT_DIR/logs"
 log() { echo "[$(date '+%F %T')] $*" | tee -a "$LOG_FILE"; }
 run() { log "→ $1"; if "$PY" "$1" >>"$LOG_FILE" 2>&1; then log "  ok"; else log "  FAILED: $1"; return 1; fi; }
 
-[ -x "$PY" ] || { log "ERROR: venv missing at $SCRIPT_DIR/venv — run setup.sh"; exit 1; }
+[ -x "$PY" ] || { log "ERROR: venv missing at $SCRIPT_DIR/venv — see README"; exit 1; }
 cd "$SCRIPT_DIR"
 
 # Per-deployment env, gitignored.

@@ -5,7 +5,7 @@
 # cached on disk after that) so the repo stays free of large binaries.
 #
 # This pulls from jsdelivr once, at setup/dev time, into vendor/ort/, which
-# Caddy then serves same-origin — the *running app* never calls out to
+# the server then serves same-origin — the *running app* never calls out to
 # jsdelivr; only this script does, the same way `pip install`/`npm pack`
 # already fetch from a public registry during setup elsewhere in this repo.
 #
