@@ -7,113 +7,53 @@
 
 # Research Digest
 
-An installable, offline-first research digest. Fetching, scoring, and summarization all run
-**in your browser** — arXiv papers are tagged and
-summarized extractively (key sentences selected, not generated) by a tiny DistilBERT model
-running entirely on your own device. No API keys, no cloud, no account, nothing synced.
-
----
+Offline-first arXiv digest. Fetching, scoring, and summarization run in your browser — papers are summarized extractively (key sentences selected, not generated) by a small DistilBERT model on your own device. No API keys, no cloud, no account.
 
 ## Features
 
-- **Installable PWA** — add it to your home screen/desktop; works offline after the first visit.
-- **Client-side everything** — interests, saved papers, and the fetch/summarize/embed pipeline
-  all run in your browser via IndexedDB and [transformers.js](https://huggingface.co/docs/transformers.js).
-  Your data never leaves your device.
-- **arXiv, straight from your browser** — fetched via DataCite with an OpenAlex fallback, deduped
-  against your existing corpus. No server in the path.
-- **Live search** — search arXiv on demand, not just what's already been fetched.
-- **Saves shape future fetches** — liking papers nudges what gets pulled in next time, via a
-  small deterministic keyword-feedback loop (no ML, no black box).
-- **Corpus-first** — everything you've fetched stays in IndexedDB; a failed/offline fetch never
-  loses what you already have.
+- **Installable PWA** — works offline after the first visit.
+- **Client-side everything** — corpus, interests, and saves live in IndexedDB; inference runs via [transformers.js](https://huggingface.co/docs/transformers.js).
+- **Direct from your browser** — arXiv metadata via DataCite with an OpenAlex fallback (arXiv's own API sends no CORS header), deduped against your corpus.
+- **Live search** — query arXiv on demand.
+- **Saves shape future fetches** — a deterministic, recency-decayed keyword loop gated behind a minimum-saves threshold. No ML.
+- **Seed corpus** — an optional server-side pipeline keeps `seed-corpus.json` fresh so a new install isn't empty.
 
----
+## Run
 
-## How it works
-
-Everything runs client-side. arXiv's own API sends no CORS header, so the app reads arXiv
-metadata from DataCite and OpenAlex instead, both of which allow direct browser requests.
-
-| Piece | Where it runs | Does |
-|-------|:---:|------|
-| `app/sources/*.js` | Browser | Normalizes each source's response into a common paper shape. |
-| `app/models.worker.js` | Browser (Web Worker) | Summarizes + embeds papers in-browser via `transformers.js`, so inference never blocks the UI. |
-| `app/feedback.js` | Browser | Turns saved papers into extra scoring keywords for your *next* fetch — recency-decayed, gated behind a minimum-saves threshold so a couple of early saves can't overfit it. |
-| `app/db.js` | Browser (IndexedDB) | Your corpus, interests, saves, and settings. Nothing here ever reaches the server. |
-| `sw.js` | Browser (Service Worker) | Caches the app shell for offline use. Cross-origin API data is always network-only. |
-
-The **server-side Python pipeline** (`fetch.py → summarize.py → embed.py → relate.py →
-export_seed.py`) still exists, unchanged in method, but its job has shrunk: it runs on a
-schedule (cron) purely to keep `seed-corpus.json` fresh, so a brand-new install isn't empty on
-first open. Once installed, the PWA fetches and summarizes for itself and never needs that file
-again.
-
----
-
-## Quick Start (developing/reviewing locally)
+Container (tiny Go file server on `scratch`, non-root), published on version tags:
 
 ```bash
-git clone https://github.com/usr-wwelsh/research-digest.git
-cd research-digest
-python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
-
-./run.sh            # fetch -> summarize -> embed -> relate -> export_seed
-# or, no network:
-./run.sh --offline  # rebuild seed-corpus.json from the existing corpus
+docker run -d -p 8080:8080 ghcr.io/usr-wwelsh/research-digest:latest
 ```
 
-The first `summarize`/`embed` run downloads ~650MB of model weights (cached under
-`.hf_cache/` after that).
+Runs fine with `--read-only --cap-drop ALL` too. Optionally bind-mount a `seed-corpus.json` at `/srv/seed-corpus.json`.
 
-The client also needs the `transformers.js` runtime it ships with:
+## Develop
 
 ```bash
-cd app
-npm install
-npm run build:vendor          # rebuilds app/vendor/transformers.min.js
-cd .. && ./scripts/fetch_vendor_assets.sh   # one-time onnxruntime-web WASM download
+git clone https://github.com/usr-wwelsh/research-digest.git && cd research-digest
+./scripts/fetch_vendor_assets.sh              # onnxruntime-web WASM
+(cd app && npm ci && npm run build:vendor)    # app/vendor/transformers.min.js
+(cd server && ROOT=.. go run .)               # http://localhost:8080
 ```
 
-**Serving it locally:** a plain static file server (`python -m http.server`, etc.) is *not*
-enough — the model worker needs the cross-origin isolation headers from the `Caddyfile`:
+Tests:
 
 ```bash
-RESEARCH_DIGEST_ROOT="$(pwd)" caddy run --config Caddyfile
+python3 -m venv venv && ./venv/bin/pip install -r requirements-dev.txt
+./venv/bin/python -m pytest
+(cd app && npm test)
+(cd server && go test ./...)
 ```
 
-Then open `http://localhost:8080` — the landing page links to the app itself
-(`app/digest.html`). See [Self-hosted deployment](#self-hosted-deployment-proxmox-lxc).
+## Seed pipeline
 
-**Run the test suites:**
-
-```bash
-./venv/bin/pip install -r requirements-dev.txt && ./venv/bin/python -m pytest
-cd app && npm test
-```
-
-**Migrating from the old static-site version?** Recover your old backlog from the archived
-HTML with zero arXiv calls:
-
-```bash
-./venv/bin/python migrate_from_html.py   # parses arxiv_archive/*.html into digest.db
-./run.sh --offline                       # summarize + embed + re-export the backlog
-```
-
----
+`./run.sh` runs `fetch → summarize → embed → relate → export_seed` and writes `seed-corpus.json`. `./run.sh --offline` skips the fetch. Needs a venv: `python3 -m venv venv && ./venv/bin/pip install -r requirements.txt`. Run it from cron to keep the seed fresh. The first run downloads ~270MB (DistilBERT) of model weights to `.hf_cache/`.
 
 ## Configuration
 
-Two separate things are configured in two separate places, on purpose — they serve different
-audiences:
-
-- **`config.json`** — the *server-side seed pipeline's* interests (same shape as before: a
-  query + keyword list per interest). This only controls what goes into `seed-corpus.json`,
-  i.e. what a fresh install sees before it starts fetching for itself.
-- **In-app Settings** (`app/settings.html`) — *your* interests, saved on your device. Seeded
-  once from `config.json`'s 5 defaults on first run, then fully yours to edit — add/remove
-  interests, change keywords, pick which sources each one uses. Nothing here is
-  sent to the server.
+- **`config.json`** — interests for the seed pipeline only (arXiv query + keywords per interest). Syntax: [category taxonomy](https://arxiv.org/category_taxonomy).
+- **In-app Settings** — your interests, stored on-device. Seeded once from `config.json`, then yours to edit.
 
 ```json
 {
@@ -123,109 +63,27 @@ audiences:
       "keywords": ["efficient", "edge", "quantization", "distillation"]
     }
   },
-  "settings": {
-    "papers_per_interest": 25,
-    "recent_days": 7,
-    "fetch_multiplier": 3
-  },
-  "local_ai": {
-    "embedding_model": "distilbert-base-uncased"
-  }
+  "settings": { "papers_per_interest": 25, "recent_days": 7, "fetch_multiplier": 3 }
 }
 ```
 
-arXiv query syntax: combine category codes with `OR`/`AND`, e.g. `cat:cs.LG OR cat:cs.AI`
-([full taxonomy](https://arxiv.org/category_taxonomy)).
-
----
-
-## Self-hosted deployment (Proxmox LXC)
-
-From your Proxmox host:
-
-```bash
-bash <(curl -sL https://raw.githubusercontent.com/usr-wwelsh/Research-Digest/main/create-lxc.sh)
-```
-
-This creates a Debian LXC, installs Caddy + cloudflared, sets up the venv, pre-downloads the
-model weights, starts Caddy as the static file server, and configures the weekly seed
-cron (Monday 8am). After it finishes, edit `config.json` and run
-`sudo -u www-data /opt/research-digest/run.sh`.
-
-Idle footprint is small — Caddy + cloudflared. The Python/torch pipeline only runs during the weekly cron job; budget headroom
-for that run same as before (DistilBERT — the only model, summarization is extractive and
-needs no separate model — needs well under 1GB of RAM while it's executing).
-
----
-
-## Project structure
+## Layout
 
 ```
-research-digest/
-├── config.json           # seed-pipeline interests (see Configuration)
-├── db.py                 # SQLite schema + data access — unchanged, still the seed corpus's source of truth
-├── fetch.py               # arXiv ingest for the seed corpus (backoff, upsert, --backfill)
-├── summarize.py            # extractive summaries + heuristics, for the seed corpus
-├── extractive.py               # centroid-based extractive summarization (shared algorithm)
-├── embed.py                # DistilBERT embeddings, for the seed corpus
-├── relate.py                # nearest-neighbour "related papers", for the seed corpus
-├── export_seed.py            # writes seed-corpus.json (atomic, refuses empty)
-├── local_ai.py                # local model client used by the seed pipeline
-├── migrate_from_html.py        # one-time v1 backlog salvage
-├── run.sh                      # seed pipeline runner (cron entrypoint)
-├── setup.sh / create-lxc.sh    # LXC bootstrap (installs Caddy as a systemd service)
-├── Caddyfile                   # static file server
-├── research-digest-*.service   # systemd unit (Caddy)
-├── scripts/fetch_vendor_assets.sh  # one-time onnxruntime-web WASM download
-├── manifest.json / sw.js        # PWA manifest + service worker
-├── icons/                        # app icons (flat mono book glyph)
-├── index.html                    # static landing page ("install this PWA")
-├── app/                           # the actual PWA — plain ES modules, no bundler
-│   ├── digest.html / search.html / saved.html / settings.html
-│   ├── db.js                      # IndexedDB wrapper (papers/interests/saved/settings)
-│   ├── sources/                   # arXiv adapters (DataCite, OpenAlex)
-│   ├── models.worker.js            # in-browser summarize/embed (transformers.js, off the UI thread)
-│   ├── feedback.js                 # save -> future-fetch keyword feedback loop
-│   ├── fetch-orchestrator.js        # wires sources + scoring + dedup + feedback + IndexedDB together
-│   └── vendor/transformers.min.js    # self-hosted, esbuild-bundled transformers.js
-└── digest.db                      # the seed corpus (gitignored)
+app/        PWA: plain ES modules, no bundler (db, sources, models.worker, feedback, fetch-orchestrator)
+server/     Go static file server used by the container
+*.py        seed pipeline (fetch, summarize, embed, relate, export_seed)
+sw.js       service worker (app shell cache; API data is network-only)
 ```
-
----
 
 ## Requirements
 
-- **Server**: Python 3.9+ · deps: `requests`, `numpy`, `torch` (CPU), `transformers` — internet
-  only for the weekly seed-pipeline fetch and the one-time model download.
 - **Client**: any evergreen browser (Service Workers, IndexedDB, Web Workers, WebAssembly).
-  Nothing to install — it's a website until you choose to install it.
-- **Dev-only**: Node.js, to rebuild `app/vendor/transformers.min.js` when the library updates
-  (`app/package.json`'s `build:vendor` script) and to run the client-side test suite.
-
----
+- **Seed pipeline**: Python 3.9+, `requests`, `numpy`, `torch` (CPU), `transformers`.
+- **Dev**: Node.js (vendor build, client tests), Go (server tests).
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
 
----
-
-## Acknowledgments
-
-- [arXiv](https://arxiv.org/), [DataCite](https://datacite.org/), and
-  [OpenAlex](https://openalex.org/) for the open research APIs
-- Hugging Face `transformers` / `transformers.js`, and the DistilBERT model authors,
-  for local inference — server-side and now in-browser
-
----
-
-## Container
-
-Static image (tiny Go file server on `scratch`, non-root, no shell, read-only-friendly) published to `ghcr.io/usr-wwelsh/research-digest` on every push to `main`.
-
-```bash
-docker run -d -p 8080:8080 --read-only --tmpfs /tmp --cap-drop ALL \
-  --security-opt no-new-privileges ghcr.io/usr-wwelsh/research-digest:latest
-```
-
-Optional: bind-mount a `seed-corpus.json` at `/srv/seed-corpus.json` to pre-populate fresh installs.
+Thanks to [arXiv](https://arxiv.org/), [DataCite](https://datacite.org/), [OpenAlex](https://openalex.org/), and Hugging Face.
