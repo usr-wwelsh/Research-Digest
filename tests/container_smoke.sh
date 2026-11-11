@@ -25,6 +25,7 @@ done
 [ "$(status /app/digest.html)" = 200 ] || fail "app page not served"
 [ "$(status /sw.js)" = 200 ] || fail "sw.js not served"
 [ "$(status /vendor/ort/ort-wasm-simd-threaded.wasm)" = 200 ] || fail "ort wasm missing"
+[ "$(status /app/vendor/transformers.min.js)" = 200 ] || fail "transformers bundle missing"
 for blocked in /app/ /icons/ /config.json /db.py /Caddyfile /.env /run.sh; do
     [ "$(status "$blocked")" = 404 ] || fail "$blocked is exposed"
 done

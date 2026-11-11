@@ -20,6 +20,7 @@ __pycache__/
 
 # Node
 node_modules/
+app/vendor/
 
 # Old pipeline output (render.py is retired; nothing generates these
 # anymore, kept only so a leftover local file from before this doesn't
